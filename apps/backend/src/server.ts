@@ -3,7 +3,6 @@ import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { PublicKey } from "@solana/web3.js";
 import { loadConfig } from "./config.js";
-import { createLogger } from "./observability/logger.js";
 import { createConnection } from "./solana/connection.js";
 import { FileKeystore } from "./keystore/keystore.js";
 import { LocalEncryptedKeystoreSignerProvider } from "./wallet/signerImpl.js";
@@ -18,15 +17,14 @@ import { SpendDb } from "./policy/spendDb.js";
 
 export async function buildServer() {
   const config = loadConfig();
-  const logger = createLogger(config.LOG_LEVEL);
-  const app = Fastify({ logger });
+  const app = Fastify({ logger: { level: config.LOG_LEVEL } });
 
   await app.register(cors, { origin: config.WEB_ORIGIN });
   await app.register(websocket);
 
   const connection = createConnection(config.SOLANA_RPC_URL, config.SOLANA_WS_URL);
-  const keystore = new FileKeystore("apps/backend/data/keystore.json", config.KEYSTORE_MASTER_KEY);
-  const spendDb = new SpendDb("apps/backend/data/spend-db.json");
+  const keystore = new FileKeystore("data/keystore.json", config.KEYSTORE_MASTER_KEY);
+  const spendDb = new SpendDb("data/spend-db.json");
   const signerProvider = new LocalEncryptedKeystoreSignerProvider(keystore);
   const policy = new TxPolicyEngine(config.PROGRAM_ID, {
     maxLamportsPerTransfer: 2_000_000_000,
@@ -65,12 +63,12 @@ export async function buildServer() {
   return { app };
 }
 
-async function main() {
+export async function main() {
   const { app } = await buildServer();
   const config = loadConfig();
   await app.listen({ host: "0.0.0.0", port: config.PORT });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.env.NODE_ENV !== "test") {
   void main();
 }
