@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+﻿use anchor_lang::prelude::*;
 
 pub mod error;
 pub mod instructions;
@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("AgntWal1et111111111111111111111111111111111");
+declare_id!("Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F");
 
 #[program]
 pub mod agent_mock_defi {
@@ -24,3 +24,4 @@ pub mod agent_mock_defi {
         instructions::swap::swap_handler(ctx, amount_in, 2)
     }
 }
+

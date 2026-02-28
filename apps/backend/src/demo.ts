@@ -1,51 +1,100 @@
+import { createMint, getAccount, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
-import { loadConfig } from "./config.js";
-import { createLogger } from "./observability/logger.js";
-import { createConnection } from "./solana/connection.js";
-import { FileKeystore } from "./keystore/keystore.js";
-import { LocalEncryptedKeystoreSignerProvider } from "./wallet/signerImpl.js";
-import { TxPolicyEngine } from "./wallet/txPolicy.js";
-import { WalletExecutor } from "./wallet/txBuilder.js";
-import { MockDefiClient } from "./protocol/mockDefiClient.js";
-import { AgentRunner } from "./agents/agentRunner.js";
 import { RandomSwapStrategy } from "./agents/strategies/randomSwap.js";
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { AgentRunner } from "./agents/agentRunner.js";
+import { loadConfig } from "./config.js";
+import { FileKeystore } from "./keystore/keystore.js";
+import { createLogger } from "./observability/logger.js";
+import { SpendDb } from "./policy/spendDb.js";
+import { MockDefiClient } from "./protocol/mockDefiClient.js";
+import { createConnection } from "./solana/connection.js";
+import { LocalEncryptedKeystoreSignerProvider } from "./wallet/signerImpl.js";
+import { WalletExecutor } from "./wallet/txBuilder.js";
+import { TxPolicyEngine } from "./wallet/txPolicy.js";
 
 async function main() {
   const config = loadConfig();
   const logger = createLogger(config.LOG_LEVEL);
   const connection = createConnection(config.SOLANA_RPC_URL, config.SOLANA_WS_URL);
+  const programId = new PublicKey(config.PROGRAM_ID);
 
   const keystore = new FileKeystore("apps/backend/data/keystore.json", config.KEYSTORE_MASTER_KEY);
+  const spendDb = new SpendDb("apps/backend/data/spend-db.json");
   const signerProvider = new LocalEncryptedKeystoreSignerProvider(keystore);
-  const policy = new TxPolicyEngine(config.PROGRAM_ID, {
-    maxLamportsPerTransfer: 2_000_000_000,
-    maxTokenAmountPerSwap: config.DEMO_SWAP_AMOUNT,
-    maxDailyVolume: config.DEMO_SWAP_AMOUNT * 100
-  });
+  const policy = new TxPolicyEngine(
+    config.PROGRAM_ID,
+    {
+      maxLamportsPerTransfer: 2_000_000_000,
+      maxTokenAmountPerSwap: config.DEMO_SWAP_AMOUNT,
+      maxDailyVolume: config.DEMO_SWAP_AMOUNT * 100
+    },
+    spendDb
+  );
   const wallet = new WalletExecutor(connection, signerProvider, policy);
-  const protocol = new MockDefiClient(new PublicKey(config.PROGRAM_ID));
+  const protocol = new MockDefiClient(programId);
   const runner = new AgentRunner(wallet, protocol, () => new RandomSwapStrategy(config.DEMO_SWAP_AMOUNT));
 
-  logger.info("Step 1: creating agents");
-  const created = await runner.createAgents(config.DEMO_NUM_AGENTS);
+  logger.info("Step 1: create admin + agents");
+  const admin = signerProvider.createSigner();
+  const adminSigner = signerProvider.getSigner(admin.agentId);
+  await connection.requestAirdrop(adminSigner.publicKey, 2_000_000_000);
+  const agents = await runner.createAgents(config.DEMO_NUM_AGENTS);
 
-  logger.info("Step 2: requesting SOL airdrops");
-  for (const agent of created) {
-    const airdropSig = await connection.requestAirdrop(new PublicKey(agent.publicKey), 1_000_000_000);
-    logger.info({ agentId: agent.agentId, airdropSig }, "airdrop requested");
+  logger.info("Step 2: create mints + seed");
+  const mintA = await createMint(connection, adminSigner, adminSigner.publicKey, null, 6);
+  const mintB = await createMint(connection, adminSigner, adminSigner.publicKey, null, 6);
+
+  const allSignatures: string[] = [];
+  for (const agent of agents) {
+    const signer = signerProvider.getSigner(agent.agentId);
+    await connection.requestAirdrop(signer.publicKey, 1_000_000_000);
+    const ataA = await getOrCreateAssociatedTokenAccount(connection, adminSigner, mintA, signer.publicKey);
+    await getOrCreateAssociatedTokenAccount(connection, adminSigner, mintB, signer.publicKey);
+    await mintTo(connection, adminSigner, mintA, ataA.address, adminSigner.publicKey, 100_000);
   }
 
-  logger.info("Step 3: running loops");
-  runner.on("event", (evt) => logger.info(evt, "agent-event"));
-  runner.start(3000);
-  await sleep(30_000);
-  runner.stop();
+  logger.info("Step 3: attempt pool init");
+  try {
+    const initIx = protocol.buildInitializePoolInstruction(adminSigner.publicKey, mintA, mintB);
+    const sig = await wallet.submitInstructions(admin.agentId, [initIx]);
+    allSignatures.push(sig);
+  } catch (err) {
+    logger.warn({ err }, "initialize_pool transaction failed (continuing)");
+  }
 
-  logger.info({ agents: runner.listAgents() }, "demo complete");
+  logger.info("Step 4: fixed swap rounds");
+  for (let i = 0; i < 3; i += 1) {
+    for (const agent of agents) {
+      try {
+        const ix = protocol.buildSwapInstruction(new PublicKey(agent.publicKey), "A_TO_B", config.DEMO_SWAP_AMOUNT);
+        const sig = await wallet.submitSwap(agent.agentId, ix, config.DEMO_SWAP_AMOUNT);
+        allSignatures.push(sig);
+      } catch (err) {
+        logger.warn({ agentId: agent.agentId, err }, "swap failed");
+      }
+    }
+  }
+
+  logger.info("Step 5: summary");
+  const summary = [];
+  for (const agent of agents) {
+    const signer = signerProvider.getSigner(agent.agentId);
+    const sol = await connection.getBalance(signer.publicKey, "confirmed");
+    const ataA = await getOrCreateAssociatedTokenAccount(connection, adminSigner, mintA, signer.publicKey);
+    const ataB = await getOrCreateAssociatedTokenAccount(connection, adminSigner, mintB, signer.publicKey);
+    const balA = await getAccount(connection, ataA.address);
+    const balB = await getAccount(connection, ataB.address);
+    summary.push({
+      agentId: agent.agentId,
+      publicKey: signer.publicKey.toBase58(),
+      solLamports: sol,
+      tokenA: balA.amount.toString(),
+      tokenB: balB.amount.toString()
+    });
+  }
+
+  logger.info({ mintA: mintA.toBase58(), mintB: mintB.toBase58(), signatures: allSignatures, summary }, "demo complete");
 }
 
 void main();
+

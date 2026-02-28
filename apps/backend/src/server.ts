@@ -14,6 +14,7 @@ import { AgentRunner } from "./agents/agentRunner.js";
 import { RandomSwapStrategy } from "./agents/strategies/randomSwap.js";
 import { registerAgentRoutes } from "./routes/agents.js";
 import { registerDemoRoutes } from "./routes/demo.js";
+import { SpendDb } from "./policy/spendDb.js";
 
 export async function buildServer() {
   const config = loadConfig();
@@ -25,12 +26,13 @@ export async function buildServer() {
 
   const connection = createConnection(config.SOLANA_RPC_URL, config.SOLANA_WS_URL);
   const keystore = new FileKeystore("apps/backend/data/keystore.json", config.KEYSTORE_MASTER_KEY);
+  const spendDb = new SpendDb("apps/backend/data/spend-db.json");
   const signerProvider = new LocalEncryptedKeystoreSignerProvider(keystore);
   const policy = new TxPolicyEngine(config.PROGRAM_ID, {
     maxLamportsPerTransfer: 2_000_000_000,
     maxTokenAmountPerSwap: config.DEMO_SWAP_AMOUNT,
     maxDailyVolume: config.DEMO_SWAP_AMOUNT * 100
-  });
+  }, spendDb);
   const wallet = new WalletExecutor(connection, signerProvider, policy);
   const protocol = new MockDefiClient(new PublicKey(config.PROGRAM_ID));
   const runner = new AgentRunner(wallet, protocol, () => new RandomSwapStrategy(config.DEMO_SWAP_AMOUNT));
@@ -49,7 +51,15 @@ export async function buildServer() {
   });
 
   await registerAgentRoutes(app, runner);
-  await registerDemoRoutes(app, runner);
+  await registerDemoRoutes(app, {
+    runner,
+    wallet,
+    protocol,
+    connection,
+    signerProvider,
+    programId: new PublicKey(config.PROGRAM_ID),
+    demoSwapAmount: config.DEMO_SWAP_AMOUNT
+  });
   app.get("/health", async () => ({ ok: true }));
 
   return { app };

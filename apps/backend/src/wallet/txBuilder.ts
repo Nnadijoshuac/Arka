@@ -37,7 +37,8 @@ export class WalletExecutor {
 
       const simulation = await this.connection.simulateTransaction(tx, [signer]);
       if (simulation.value.err) {
-        throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
+        const logs = simulation.value.logs?.join(" | ") ?? "no logs";
+        throw new Error(`Simulation failed: ${JSON.stringify(simulation.value.err)} :: ${logs}`);
       }
 
       tx.sign(signer);
@@ -56,6 +57,11 @@ export class WalletExecutor {
 
   async createAgent(): Promise<{ agentId: string; publicKey: string }> {
     return this.signerProvider.createSigner();
+  }
+
+  async submitSwap(agentId: string, instruction: TransactionInstruction, amount: number): Promise<string> {
+    this.policy.assertSwapAmount(agentId, amount);
+    return this.submitInstructions(agentId, [instruction]);
   }
 
   listAgents(): Array<{ agentId: string; publicKey: string; createdAt: string }> {

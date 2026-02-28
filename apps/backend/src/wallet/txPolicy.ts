@@ -5,6 +5,7 @@ import {
   SPL_TOKEN_PROGRAM_ID,
   SYSTEM_PROGRAM_ID
 } from "../solana/constants.js";
+import { SpendDb } from "../policy/spendDb.js";
 
 export type SpendCaps = {
   maxLamportsPerTransfer: number;
@@ -15,11 +16,10 @@ export type SpendCaps = {
 export class PolicyViolation extends Error {}
 
 export class TxPolicyEngine {
-  private readonly dailySpend = new Map<string, number>();
-
   constructor(
     private readonly mockDefiProgramId: string,
-    private readonly caps: SpendCaps
+    private readonly caps: SpendCaps,
+    private readonly spendDb: SpendDb
   ) {}
 
   assertProgramAllowlist(instructions: TransactionInstruction[]): void {
@@ -54,11 +54,11 @@ export class TxPolicyEngine {
   }
 
   private assertDaily(agentId: string, amount: number): void {
-    const current = this.dailySpend.get(agentId) ?? 0;
+    const current = this.spendDb.getDailySpend(agentId);
     const next = current + amount;
     if (next > this.caps.maxDailyVolume) {
       throw new PolicyViolation(`Daily cap exceeded for ${agentId}`);
     }
-    this.dailySpend.set(agentId, next);
+    this.spendDb.addDailySpend(agentId, amount);
   }
 }

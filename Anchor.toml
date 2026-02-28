@@ -1,12 +1,12 @@
-[features]
+﻿[features]
 seeds = false
 skip-lint = false
 
 [programs.localnet]
-agent_mock_defi = "AgntWal1et111111111111111111111111111111111"
+agent_mock_defi = "Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F"
 
 [programs.devnet]
-agent_mock_defi = "AgntWal1et111111111111111111111111111111111"
+agent_mock_defi = "Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F"
 
 [provider]
 cluster = "Localnet"
@@ -14,3 +14,4 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "pnpm ts-node programs/agent_mock_defi/tests/agent_mock_defi.ts"
+

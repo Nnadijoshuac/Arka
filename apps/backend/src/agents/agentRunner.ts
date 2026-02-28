@@ -96,7 +96,7 @@ export class AgentRunner extends EventEmitter {
           action.direction,
           action.amount
         );
-        return this.wallet.submitInstructions(agentId, [ix]);
+        return this.wallet.submitSwap(agentId, ix, action.amount);
       });
 
       state.lastSignature = signature;

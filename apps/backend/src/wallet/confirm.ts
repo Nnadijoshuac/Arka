@@ -37,21 +37,28 @@ export async function sendWithRetry(
   options?: SendOptions,
   maxRetries = 2
 ): Promise<string> {
+  let lastErr: unknown;
   let attempt = 0;
   while (attempt <= maxRetries) {
-    const { tx, lastValidBlockHeight } = await txBuilder();
-    const signature = await connection.sendRawTransaction(tx.serialize(), options);
     try {
+      const { tx, lastValidBlockHeight } = await txBuilder();
+      const signature = await connection.sendRawTransaction(tx.serialize(), options);
       await confirmSignatureStrict(connection, signature, lastValidBlockHeight);
       return signature;
     } catch (err) {
+      lastErr = err;
       const message = err instanceof Error ? err.message : String(err);
-      if (!message.toLowerCase().includes("expired") || attempt === maxRetries) {
+      const retryable =
+        message.toLowerCase().includes("expired") ||
+        message.toLowerCase().includes("blockhash") ||
+        message.toLowerCase().includes("simulation failed") ||
+        message.toLowerCase().includes("insufficient");
+      if (!retryable || attempt === maxRetries) {
         throw err;
       }
     }
     attempt += 1;
   }
 
-  throw new Error("Transaction retries exhausted");
+  throw new Error(`Transaction retries exhausted: ${String(lastErr)}`);
 }
