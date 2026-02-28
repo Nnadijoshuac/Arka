@@ -18,8 +18,8 @@ async function main() {
   const connection = createConnection(config.SOLANA_RPC_URL, config.SOLANA_WS_URL);
   const programId = new PublicKey(config.PROGRAM_ID);
 
-  const keystore = new FileKeystore("apps/backend/data/keystore.json", config.KEYSTORE_MASTER_KEY);
-  const spendDb = new SpendDb("apps/backend/data/spend-db.json");
+  const keystore = new FileKeystore("data/keystore.json", config.KEYSTORE_MASTER_KEY);
+  const spendDb = new SpendDb("data/spend-db.json");
   const signerProvider = new LocalEncryptedKeystoreSignerProvider(keystore);
   const policy = new TxPolicyEngine(
     config.PROGRAM_ID,
@@ -97,4 +97,3 @@ async function main() {
 }
 
 void main();
-
