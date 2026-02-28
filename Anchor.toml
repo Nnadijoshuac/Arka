@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-agent_mock_defi = "Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F"
+agent_mock_defi = "Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw"
 
 [programs.devnet]
-agent_mock_defi = "Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F"
+agent_mock_defi = "Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw"
 
 [provider]
 cluster = "Localnet"

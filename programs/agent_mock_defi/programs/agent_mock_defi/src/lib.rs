@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWxTWqkZx1Yeznq4kQbF5x8h5N7F");
+declare_id!("Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw");
 
 #[program]
 pub mod agent_mock_defi {
