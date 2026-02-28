@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+.env
+.env.local
+apps/backend/data/keystore.json
+apps/backend/dist
+apps/web/.next
+coverage
+target
+.DS_Store
