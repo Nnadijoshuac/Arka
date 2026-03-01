@@ -9,8 +9,8 @@ pub struct InitializePool<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    pub mint_a: Account<'info, Mint>,
-    pub mint_b: Account<'info, Mint>,
+    pub mint_a: Box<Account<'info, Mint>>,
+    pub mint_b: Box<Account<'info, Mint>>,
 
     #[account(
         init,
@@ -19,7 +19,7 @@ pub struct InitializePool<'info> {
         seeds = [b"pool_state", mint_a.key().as_ref(), mint_b.key().as_ref()],
         bump
     )]
-    pub pool_state: Account<'info, PoolState>,
+    pub pool_state: Box<Account<'info, PoolState>>,
 
     /// CHECK: PDA authority used for vault signing only.
     #[account(
@@ -34,7 +34,7 @@ pub struct InitializePool<'info> {
         associated_token::mint = mint_a,
         associated_token::authority = pool_authority
     )]
-    pub vault_a: Account<'info, TokenAccount>,
+    pub vault_a: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -42,7 +42,7 @@ pub struct InitializePool<'info> {
         associated_token::mint = mint_b,
         associated_token::authority = pool_authority
     )]
-    pub vault_b: Account<'info, TokenAccount>,
+    pub vault_b: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,

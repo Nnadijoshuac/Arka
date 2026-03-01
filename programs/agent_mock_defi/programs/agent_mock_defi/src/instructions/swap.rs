@@ -70,10 +70,11 @@ pub fn swap_handler(ctx: Context<Swap>, amount_in: u64, direction: u8) -> Result
         mint: ctx.accounts.destination_mint.to_account_info(),
         authority: ctx.accounts.pool_authority.to_account_info(),
     };
+    let signer_seeds: &[&[&[u8]]] = &[authority_seeds];
     let transfer_out_ctx = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
         transfer_out_accounts,
-        &[authority_seeds],
+        signer_seeds,
     );
     token::transfer_checked(
         transfer_out_ctx,
