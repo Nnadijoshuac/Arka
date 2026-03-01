@@ -4,7 +4,7 @@ import Image from "next/image";
 export default function LandingPage() {
   return (
     <main className="morf-root">
-      <div className="container">
+      <div className="morf-full">
         <header className="morf-topbar">
           <div className="morf-brand-block">
             <div className="morf-brand-dot">A</div>
