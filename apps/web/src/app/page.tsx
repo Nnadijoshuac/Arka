@@ -2,74 +2,55 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <main className="landing-root">
+    <main className="landing-v2-root">
       <div className="container">
-        <nav className="landing-nav">
-          <div className="logo-mark">Arka Protocol</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/app" className="btn btn-primary">
-              Launch App
-            </Link>
-          </div>
-        </nav>
+        <section className="landing-v2-surface">
+          <nav className="landing-v2-nav">
+            <div className="landing-v2-brand">
+              <span className="landing-v2-brand-mark" />
+              <span>Autarch</span>
+            </div>
 
-        <section className="hero">
-          <div>
-            <div className="pill">Solana Devnet Agent Infrastructure</div>
-            <h1 className="display">Autonomous Wallet Operations, Controlled by Policy.</h1>
-            <p>
-              Arka orchestrates agent wallets for repeatable onchain execution across setup, simulation, execution,
-              and monitoring. Built for deterministic devnet testing with strict transaction policy controls.
-            </p>
-            <div className="hero-actions">
-              <Link href="/app" className="btn btn-primary">
-                Open Dashboard
+            <div className="landing-v2-links">
+              <a href="#rollups">Rollups</a>
+              <a href="#metacontrol">Metacontrol</a>
+              <a href="#blog">Blog</a>
+              <a href="#docs">Docs</a>
+            </div>
+
+            <div className="landing-v2-nav-actions">
+              <span className="landing-v2-icon">D</span>
+              <span className="landing-v2-icon">X</span>
+              <span className="landing-v2-icon">T</span>
+              <Link href="/app" className="landing-v2-cta">
+                Get Started
               </Link>
-              <a href="#capabilities" className="btn btn-ghost">
-                View Capabilities
-              </a>
             </div>
-          </div>
+          </nav>
 
-          <aside className="card hero-side">
-            <div className="subtle" style={{ fontWeight: 600 }}>
-              Live Model
+          <section className="landing-v2-hero">
+            <div className="landing-v2-headline-card">
+              <h1 className="landing-v2-headline display">The Internet Of Agent Wallets</h1>
             </div>
-            <div className="hero-metrics">
-              <div className="metric">
-                <h3>5x</h3>
-                <p>Default parallel agents per setup cycle.</p>
-              </div>
-              <div className="metric">
-                <h3>3 rounds</h3>
-                <p>Default deterministic batch run for repeatable swap simulations.</p>
-              </div>
-              <div className="metric">
-                <h3>Policy first</h3>
-                <p>Program allowlist + spend caps + daily volume controls before send.</p>
+
+            <div className="landing-v2-pattern landing-v2-pattern-top" />
+            <div className="landing-v2-pattern landing-v2-pattern-bottom" />
+
+            <div className="landing-v2-info-card">
+              <p>
+                Autarch is a control plane for autonomous wallets, enabling safe multi-agent orchestration, execution,
+                and observability across Solana environments.
+              </p>
+              <div className="landing-v2-info-actions">
+                <Link href="/app" className="landing-v2-pill-btn landing-v2-pill-btn-primary">
+                  Explore App
+                </Link>
+                <a href="#docs" className="landing-v2-pill-btn landing-v2-pill-btn-ghost">
+                  View Docs
+                </a>
               </div>
             </div>
-          </aside>
-        </section>
-
-        <section id="capabilities" className="feature-grid">
-          <article className="card feature">
-            <div className="pill">Provisioning</div>
-            <h4>Agent and Mint Bootstrap</h4>
-            <p>Create agents, issue token mints, initialize a mock pool, and seed balances with one controlled flow.</p>
-          </article>
-
-          <article className="card feature">
-            <div className="pill">Execution</div>
-            <h4>Batch Swap Simulation</h4>
-            <p>Run multi-round swaps through deployed Anchor instructions and capture signatures per execution step.</p>
-          </article>
-
-          <article className="card feature">
-            <div className="pill">Observability</div>
-            <h4>Streamed Operational Log</h4>
-            <p>Inspect status, errors, and signatures in a live event feed connected through WebSocket telemetry.</p>
-          </article>
+          </section>
         </section>
       </div>
     </main>
