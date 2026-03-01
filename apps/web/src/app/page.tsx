@@ -1,74 +1,70 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LandingPage() {
   return (
-    <main className="landing-root">
+    <main className="morf-root">
       <div className="container">
-        <nav className="landing-nav">
-          <div className="logo-mark">Arka Protocol</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Link href="/app" className="btn btn-primary">
-              Launch App
+        <header className="morf-topbar">
+          <div className="morf-brand-block">
+            <div className="morf-brand-dot">A</div>
+            <span className="morf-nav-link">Products</span>
+            <span className="morf-nav-link">Catalog</span>
+            <span className="morf-nav-link">Resources</span>
+          </div>
+          <div className="morf-brand-block">
+            <span className="morf-nav-link">Pro Access</span>
+            <span className="morf-nav-link">Sign in</span>
+            <Link href="/app" className="morf-pill morf-pill-light">
+              Open App
             </Link>
           </div>
-        </nav>
+        </header>
 
-        <section className="hero">
-          <div>
-            <div className="pill">Solana Devnet Agent Infrastructure</div>
-            <h1 className="display">Autonomous Wallet Operations, Controlled by Policy.</h1>
+        <section className="morf-stage">
+          <div className="morf-gradient-overlay" />
+          <h1 className="morf-wordmark">AUTARCH</h1>
+
+          <article className="morf-copy">
+            <h2>Autonomous Wallet Infrastructure</h2>
             <p>
-              Arka orchestrates agent wallets for repeatable onchain execution across setup, simulation, execution,
-              and monitoring. Built for deterministic devnet testing with strict transaction policy controls.
+              Autarch is a creative protocol layer for orchestrating agent wallets, policy-safe execution flows, and
+              interactive onchain operations.
             </p>
-            <div className="hero-actions">
-              <Link href="/app" className="btn btn-primary">
-                Open Dashboard
+            <div className="morf-actions">
+              <Link href="/app" className="morf-pill morf-pill-orange">
+                Explore Ecosystem
               </Link>
-              <a href="#capabilities" className="btn btn-ghost">
-                View Capabilities
+              <a href="#features" className="morf-pill morf-pill-light">
+                Open Studio
               </a>
             </div>
-          </div>
+          </article>
 
-          <aside className="card hero-side">
-            <div className="subtle" style={{ fontWeight: 600 }}>
-              Live Model
-            </div>
-            <div className="hero-metrics">
-              <div className="metric">
-                <h3>5x</h3>
-                <p>Default parallel agents per setup cycle.</p>
-              </div>
-              <div className="metric">
-                <h3>3 rounds</h3>
-                <p>Default deterministic batch run for repeatable swap simulations.</p>
-              </div>
-              <div className="metric">
-                <h3>Policy first</h3>
-                <p>Program allowlist + spend caps + daily volume controls before send.</p>
-              </div>
-            </div>
-          </aside>
+          <div className="morf-hero-wrap">
+            <Image
+              src="/hero.png"
+              alt="Autarch hero visual"
+              fill
+              priority
+              sizes="(max-width: 900px) 100vw, 52vw"
+              className="morf-hero-image"
+            />
+          </div>
         </section>
 
-        <section id="capabilities" className="feature-grid">
-          <article className="card feature">
-            <div className="pill">Provisioning</div>
-            <h4>Agent and Mint Bootstrap</h4>
-            <p>Create agents, issue token mints, initialize a mock pool, and seed balances with one controlled flow.</p>
+        <section id="features" className="morf-feature-row">
+          <article className="morf-feature-card">
+            <h3>Policy-Governed Agents</h3>
+            <p>Enforce spend controls, allowlists, and deterministic transaction boundaries for every autonomous run.</p>
           </article>
-
-          <article className="card feature">
-            <div className="pill">Execution</div>
-            <h4>Batch Swap Simulation</h4>
-            <p>Run multi-round swaps through deployed Anchor instructions and capture signatures per execution step.</p>
+          <article className="morf-feature-card">
+            <h3>Execution Studio</h3>
+            <p>Configure setup, rounds, and swap amounts, then run complete multi-agent simulations in one flow.</p>
           </article>
-
-          <article className="card feature">
-            <div className="pill">Observability</div>
-            <h4>Streamed Operational Log</h4>
-            <p>Inspect status, errors, and signatures in a live event feed connected through WebSocket telemetry.</p>
+          <article className="morf-feature-card">
+            <h3>Live Visibility</h3>
+            <p>Inspect wallet state, signatures, and event logs in real time through a unified operational dashboard.</p>
           </article>
         </section>
       </div>
