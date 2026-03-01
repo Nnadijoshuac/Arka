@@ -1,12 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { PublicKey } from "@solana/web3.js";
-import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
+import { Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  createMint,
+  getAssociatedTokenAddressSync,
+  getOrCreateAssociatedTokenAccount,
+  mintTo
+} from "@solana/spl-token";
 import type { AgentRunner } from "../agents/agentRunner.js";
 import type { WalletExecutor } from "../wallet/txBuilder.js";
 import type { MockDefiClient } from "../protocol/mockDefiClient.js";
 import type { SignerProvider } from "../wallet/signer.js";
 import type { Connection } from "@solana/web3.js";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 type DemoContext = {
   runner: AgentRunner;
@@ -22,12 +30,20 @@ type DemoState = {
   adminAgentId?: string;
   mintA?: PublicKey;
   mintB?: PublicKey;
+  poolState?: PublicKey;
+  poolAuthority?: PublicKey;
+  vaultA?: PublicKey;
+  vaultB?: PublicKey;
+  setupInProgress: boolean;
   signatures: string[];
 };
 
 const setupSchema = z.object({
   numAgents: z.number().int().positive().max(50).default(5),
-  seedAmount: z.number().int().positive().default(100_000)
+  seedAmount: z.number().int().positive().default(100_000),
+  adminFundLamports: z.number().int().positive().default(400_000_000),
+  agentFundLamports: z.number().int().positive().default(80_000_000),
+  reserveLamports: z.number().int().positive().default(120_000_000)
 });
 
 const runSchema = z.object({
@@ -36,25 +52,68 @@ const runSchema = z.object({
 });
 
 export async function registerDemoRoutes(app: FastifyInstance, ctx: DemoContext) {
-  const state: DemoState = { signatures: [] };
+  const state: DemoState = { setupInProgress: false, signatures: [] };
+  const defaultKeypairPath = join(homedir(), ".config", "solana", "id.json");
+  const fundedKeypairPath = process.env.SOLANA_KEYPAIR_PATH ?? defaultKeypairPath;
+
+  function loadFundedSigner(): Keypair {
+    const raw = JSON.parse(readFileSync(fundedKeypairPath, "utf8")) as number[];
+    return Keypair.fromSecretKey(Uint8Array.from(raw));
+  }
+
+  async function fundWallet(from: Keypair, to: PublicKey, lamports: number): Promise<string> {
+    const ix = SystemProgram.transfer({
+      fromPubkey: from.publicKey,
+      toPubkey: to,
+      lamports
+    });
+    const tx = new Transaction().add(ix);
+    return sendAndConfirmTransaction(ctx.connection, tx, [from], { commitment: "confirmed" });
+  }
+
+  async function topUpWallet(from: Keypair, to: PublicKey, targetLamports: number): Promise<void> {
+    const current = await ctx.connection.getBalance(to, "confirmed");
+    if (current >= targetLamports) {
+      return;
+    }
+    const needed = targetLamports - current;
+    await fundWallet(from, to, needed);
+  }
 
   app.post("/demo/setup", async (req) => {
+    if (state.setupInProgress) {
+      throw new Error("Setup already in progress. Wait for completion and try again.");
+    }
+    state.setupInProgress = true;
+    try {
     const input = setupSchema.parse(req.body ?? {});
     const existing = ctx.runner.listAgents();
     if (existing.length < input.numAgents) {
       await ctx.runner.createAgents(input.numAgents - existing.length);
     }
+    const setupAgents = ctx.runner.listAgents().slice(0, input.numAgents);
 
     const adminCreated = ctx.signerProvider.createSigner();
     state.adminAgentId = adminCreated.agentId;
     const adminSigner = ctx.signerProvider.getSigner(adminCreated.agentId);
-    await ctx.connection.requestAirdrop(adminSigner.publicKey, 2_000_000_000);
+    const fundedSigner = loadFundedSigner();
 
-    state.mintA = await createMint(ctx.connection, adminSigner, adminSigner.publicKey, null, 6);
-    state.mintB = await createMint(ctx.connection, adminSigner, adminSigner.publicKey, null, 6);
+    const fundedBalance = await ctx.connection.getBalance(fundedSigner.publicKey, "confirmed");
+    const requiredLamports =
+      input.adminFundLamports + setupAgents.length * input.agentFundLamports + input.reserveLamports;
+    if (fundedBalance < requiredLamports) {
+      throw new Error(
+        `Funded signer ${fundedSigner.publicKey.toBase58()} has insufficient SOL (${fundedBalance} lamports). Need at least ${requiredLamports} lamports for setup with ${setupAgents.length} agents.`
+      );
+    }
+
+    await topUpWallet(fundedSigner, adminSigner.publicKey, input.adminFundLamports);
+
+    const mintA = await createMint(ctx.connection, adminSigner, adminSigner.publicKey, null, 6);
+    const mintB = await createMint(ctx.connection, adminSigner, adminSigner.publicKey, null, 6);
 
     const [poolStatePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("pool_state"), state.mintA.toBuffer(), state.mintB.toBuffer()],
+      [Buffer.from("pool_state"), mintA.toBuffer(), mintB.toBuffer()],
       ctx.programId
     );
     const [poolAuthorityPda] = PublicKey.findProgramAddressSync(
@@ -62,84 +121,84 @@ export async function registerDemoRoutes(app: FastifyInstance, ctx: DemoContext)
       ctx.programId
     );
 
-    const vaultA = await getOrCreateAssociatedTokenAccount(
-      ctx.connection,
-      adminSigner,
-      state.mintA,
-      poolAuthorityPda,
-      true
-    );
-    const vaultB = await getOrCreateAssociatedTokenAccount(
-      ctx.connection,
-      adminSigner,
-      state.mintB,
-      poolAuthorityPda,
-      true
-    );
+    const vaultA = getAssociatedTokenAddressSync(mintA, poolAuthorityPda, true);
+    const vaultB = getAssociatedTokenAddressSync(mintB, poolAuthorityPda, true);
+
+    if (state.adminAgentId) {
+      const initIx = ctx.protocol.buildInitializePoolInstruction(adminSigner.publicKey, mintA, mintB, {
+        poolState: poolStatePda,
+        poolAuthority: poolAuthorityPda,
+        vaultA,
+        vaultB
+      });
+      const sig = await ctx.wallet.submitInstructions(state.adminAgentId, [initIx]);
+      state.signatures.push(sig);
+    }
 
     await mintTo(
       ctx.connection,
       adminSigner,
-      state.mintB,
-      vaultB.address,
+      mintB,
+      vaultB,
       adminSigner.publicKey,
       input.seedAmount
     );
     await mintTo(
       ctx.connection,
       adminSigner,
-      state.mintA,
-      vaultA.address,
+      mintA,
+      vaultA,
       adminSigner.publicKey,
       input.seedAmount
     );
 
-    const setupAgents = ctx.runner.listAgents();
     for (const agent of setupAgents) {
       const signer = ctx.signerProvider.getSigner(agent.agentId);
-      await ctx.connection.requestAirdrop(signer.publicKey, 1_000_000_000);
+      await topUpWallet(fundedSigner, signer.publicKey, input.agentFundLamports);
 
       const agentAtaA = await getOrCreateAssociatedTokenAccount(
         ctx.connection,
         adminSigner,
-        state.mintA,
+        mintA,
         signer.publicKey
       );
-      await getOrCreateAssociatedTokenAccount(ctx.connection, adminSigner, state.mintB, signer.publicKey);
+      await getOrCreateAssociatedTokenAccount(ctx.connection, adminSigner, mintB, signer.publicKey);
       await mintTo(
         ctx.connection,
         adminSigner,
-        state.mintA,
+        mintA,
         agentAtaA.address,
         adminSigner.publicKey,
         input.seedAmount
       );
     }
 
-    if (state.adminAgentId) {
-      try {
-        const initIx = ctx.protocol.buildInitializePoolInstruction(
-          adminSigner.publicKey,
-          state.mintA,
-          state.mintB
-        );
-        const sig = await ctx.wallet.submitInstructions(state.adminAgentId, [initIx]);
-        state.signatures.push(sig);
-      } catch (err) {
-        app.log.warn({ err }, "initialize_pool tx failed in setup; continuing demo bootstrap");
-      }
-    }
+    state.mintA = mintA;
+    state.mintB = mintB;
+    state.poolState = poolStatePda;
+    state.poolAuthority = poolAuthorityPda;
+    state.vaultA = vaultA;
+    state.vaultB = vaultB;
 
     return {
       ok: true,
-      mintA: state.mintA.toBase58(),
-      mintB: state.mintB.toBase58(),
+      mintA: mintA.toBase58(),
+      mintB: mintB.toBase58(),
       poolAuthority: poolAuthorityPda.toBase58(),
       agents: ctx.runner.listAgents().length
     };
+    } finally {
+      state.setupInProgress = false;
+    }
   });
 
   app.post("/demo/run", async (req) => {
+    if (state.setupInProgress) {
+      throw new Error("Setup in progress. Wait for /demo/setup to complete.");
+    }
+    if (!state.mintA || !state.mintB || !state.poolState || !state.poolAuthority || !state.vaultA || !state.vaultB) {
+      throw new Error("Demo not initialized. Call /demo/setup first.");
+    }
     const parsed = runSchema.parse(req.body ?? {});
     const amount = Math.min(parsed.amount, ctx.demoSwapAmount);
     const agents = ctx.runner.listAgents();
@@ -149,7 +208,19 @@ export async function registerDemoRoutes(app: FastifyInstance, ctx: DemoContext)
     for (let round = 0; round < parsed.rounds; round += 1) {
       for (const agent of agents) {
         try {
-          const ix = ctx.protocol.buildSwapInstruction(new PublicKey(agent.publicKey), "A_TO_B", amount);
+          const user = new PublicKey(agent.publicKey);
+          const userSourceAta = getAssociatedTokenAddressSync(state.mintA, user);
+          const userDestAta = getAssociatedTokenAddressSync(state.mintB, user);
+          const ix = ctx.protocol.buildSwapInstruction(user, "A_TO_B", amount, {
+            poolState: state.poolState,
+            poolAuthority: state.poolAuthority,
+            userSource: userSourceAta,
+            userDestination: userDestAta,
+            vaultSource: state.vaultA,
+            vaultDestination: state.vaultB,
+            sourceMint: state.mintA,
+            destinationMint: state.mintB
+          });
           const sig = await ctx.wallet.submitSwap(agent.agentId, ix, amount);
           signatures.push(sig);
         } catch (err) {
