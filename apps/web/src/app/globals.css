@@ -102,6 +102,172 @@ a {
   backdrop-filter: blur(10px);
 }
 
+.landing-v3-root {
+  padding: 26px 0 64px;
+}
+
+.landing-v3-shell {
+  background: var(--landing-bg);
+  color: var(--landing-ink);
+  border-radius: 24px;
+  padding: 18px 18px 22px;
+  min-height: calc(100vh - 66px);
+}
+
+.landing-v3-nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 22px;
+  padding: 2px 4px 10px;
+}
+
+.landing-v3-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--landing-orange);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: clamp(33px, 3.4vw, 52px);
+}
+
+.landing-v3-brand-mark {
+  width: 33px;
+  height: 20px;
+  background: var(--landing-orange);
+  border-radius: 10px 10px 3px 3px;
+  transform: skewX(-20deg);
+}
+
+.landing-v3-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 28px;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+
+.landing-v3-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-v3-icon {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.landing-v3-cta {
+  margin-left: 10px;
+  background: var(--landing-orange);
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 700;
+}
+
+.landing-v3-hero {
+  margin-top: 12px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  grid-template-areas:
+    "headline topPattern"
+    "basePattern basePattern";
+  gap: 12px;
+}
+
+.landing-v3-headline-card {
+  grid-area: headline;
+  z-index: 4;
+  background: #f4f4f4;
+  border-radius: 0 0 34px 0;
+  padding: 30px 26px 18px;
+}
+
+.landing-v3-headline {
+  margin: 0;
+  font-family: var(--font-body), sans-serif;
+  font-weight: 800;
+  font-size: clamp(64px, 8vw, 122px);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  color: #000;
+  max-width: 8ch;
+  text-wrap: balance;
+}
+
+.landing-v3-top-pattern,
+.landing-v3-base-pattern {
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at center, var(--landing-orange) 0 1.9px, transparent 2px) 0 0/14px 14px,
+    linear-gradient(135deg, #5f66ff 0%, #4c56ff 100%);
+}
+
+.landing-v3-top-pattern {
+  grid-area: topPattern;
+  min-height: 354px;
+}
+
+.landing-v3-base-pattern {
+  grid-area: basePattern;
+  min-height: 415px;
+}
+
+.landing-v3-info-card {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  width: min(42.5%, 525px);
+  background: var(--landing-bg);
+  border-radius: 28px 0 0 0;
+  padding: 28px 24px 18px;
+}
+
+.landing-v3-info-card p {
+  margin: 0;
+  font-size: clamp(18px, 1.6vw, 29px);
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+.landing-v3-info-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.landing-v3-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 700;
+}
+
+.landing-v3-pill-primary {
+  background: var(--landing-orange);
+  color: #fff;
+}
+
+.landing-v3-pill-ghost {
+  border: 1px solid rgba(0, 0, 0, 0.34);
+  color: #111;
+}
+
 .landing-v2-root {
   padding: 30px 0 70px;
 }
@@ -555,6 +721,41 @@ a {
 }
 
 @media (max-width: 1000px) {
+  .landing-v3-nav {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .landing-v3-links {
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 22px;
+  }
+
+  .landing-v3-hero {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "headline"
+      "topPattern"
+      "basePattern";
+  }
+
+  .landing-v3-headline-card {
+    border-radius: 16px;
+  }
+
+  .landing-v3-top-pattern,
+  .landing-v3-base-pattern {
+    min-height: 260px;
+  }
+
+  .landing-v3-info-card {
+    position: static;
+    width: 100%;
+    border-radius: 20px;
+    margin-top: 10px;
+  }
+
   .landing-v2-nav {
     grid-template-columns: 1fr;
     gap: 14px;
@@ -612,6 +813,28 @@ a {
 }
 
 @media (max-width: 640px) {
+  .landing-v3-shell {
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .landing-v3-brand {
+    font-size: 37px;
+  }
+
+  .landing-v3-headline {
+    font-size: clamp(54px, 16vw, 86px);
+  }
+
+  .landing-v3-cta {
+    margin-left: 0;
+    padding: 10px 18px;
+  }
+
+  .landing-v3-info-actions {
+    flex-wrap: wrap;
+  }
+
   .landing-v2-surface {
     border-radius: 14px;
     padding: 14px;
