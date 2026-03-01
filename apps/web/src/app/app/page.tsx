@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  createAgents,
-  listAgents,
-  runDemo,
-  setupDemo,
-  stopDemo,
-  type Agent,
-  type DemoRunResponse
+  createWallet,
+  executeWallet,
+  fundWallet,
+  getWalletMonitor,
+  getWalletTransactions,
+  listWallets,
+  type WalletAccount,
+  type WalletMonitor,
+  type WalletTransaction
 } from "../../lib/api";
-import type { TxEvent } from "../../components/TxLog";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws";
-
-type BusyAction = "create" | "setup" | "run" | "stop" | null;
+type BusyAction = "create" | "fund" | "execute" | null;
 
 function shortPubkey(v: string) {
   return `${v.slice(0, 7)}...${v.slice(-5)}`;
@@ -25,49 +24,55 @@ function explorerUrl(sig: string) {
   return `https://explorer.solana.com/tx/${sig}?cluster=devnet`;
 }
 
+function lamportsToSol(lamports: number) {
+  return (lamports / 1_000_000_000).toFixed(4);
+}
+
 export default function DashboardPage() {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [events, setEvents] = useState<TxEvent[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(undefined);
+  const [wallets, setWallets] = useState<WalletAccount[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | undefined>(undefined);
+  const [monitor, setMonitor] = useState<WalletMonitor | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [statusType, setStatusType] = useState<"ok" | "error">("ok");
-  const [wsConnected, setWsConnected] = useState(false);
-  const [createCount, setCreateCount] = useState(3);
-  const [setupAgents, setSetupAgents] = useState(5);
+
+  const [walletName, setWalletName] = useState("Alpha Agent");
+  const [strategy, setStrategy] = useState<"heuristic_ai" | "random">("heuristic_ai");
+  const [fundLamports, setFundLamports] = useState(100_000_000);
   const [rounds, setRounds] = useState(3);
   const [amount, setAmount] = useState(1000);
 
-  useEffect(() => {
-    void refreshAgents();
-  }, []);
-
-  useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => setWsConnected(true);
-    ws.onclose = () => setWsConnected(false);
-    ws.onerror = () => setWsConnected(false);
-    ws.onmessage = (message) => {
-      const evt = JSON.parse(message.data as string) as TxEvent;
-      setEvents((prev) => [...prev, evt].slice(-120));
-      void refreshAgents();
-    };
-
-    return () => ws.close();
-  }, []);
-
-  const selected = useMemo(
-    () => agents.find((a) => a.agentId === selectedAgentId) ?? agents[0],
-    [agents, selectedAgentId]
+  const selectedWallet = useMemo(
+    () => wallets.find((w) => w.walletId === selectedWalletId) ?? wallets[0],
+    [wallets, selectedWalletId]
   );
 
-  const okEvents = useMemo(() => events.filter((e) => e.status === "ok").length, [events]);
-  const errorEvents = useMemo(() => events.filter((e) => e.status !== "ok").length, [events]);
+  useEffect(() => {
+    void refreshWallets();
+  }, []);
 
-  async function refreshAgents() {
-    const next = await listAgents();
-    setAgents(next);
+  useEffect(() => {
+    if (!selectedWallet?.walletId) {
+      setMonitor(null);
+      setTransactions([]);
+      return;
+    }
+    void refreshWalletDetails(selectedWallet.walletId);
+  }, [selectedWallet?.walletId]);
+
+  async function refreshWallets() {
+    const response = await listWallets();
+    setWallets(response.wallets);
+    if (!selectedWalletId && response.wallets[0]) {
+      setSelectedWalletId(response.wallets[0].walletId);
+    }
+  }
+
+  async function refreshWalletDetails(walletId: string) {
+    const [m, tx] = await Promise.all([getWalletMonitor(walletId), getWalletTransactions(walletId)]);
+    setMonitor(m);
+    setTransactions(tx.transactions);
   }
 
   function setStatus(message: string, type: "ok" | "error") {
@@ -75,35 +80,14 @@ export default function DashboardPage() {
     setStatusType(type);
   }
 
-  function appendRunEvents(result: DemoRunResponse) {
-    const now = new Date().toISOString();
-    setEvents((prev) => [
-      ...prev,
-      ...result.signatures.map((signature) => ({
-        timestamp: now,
-        agentId: "demo-run",
-        action: `swap:${result.amount}`,
-        status: "ok",
-        signature
-      })),
-      ...result.errors.map((e) => ({
-        timestamp: now,
-        agentId: e.agentId,
-        action: `swap:${result.amount}`,
-        status: "error",
-        err: e.err
-      }))
-    ]);
-  }
-
   return (
     <main className="dashboard-root">
       <div className="container">
         <header className="app-header">
           <div>
-            <div className="pill">Arka Control Plane</div>
-            <h1 className="display">Agent Wallet Operations Dashboard</h1>
-            <p>Provision, fund, run, and inspect autonomous wallet transactions on Solana devnet.</p>
+            <div className="pill">Autarch Control Plane</div>
+            <h1 className="display">Named Wallet Accounts for AI Agents</h1>
+            <p>Create one wallet, fund it, execute autonomous actions, and monitor every transaction.</p>
           </div>
           <Link href="/" className="btn btn-ghost">
             Back to Landing
@@ -112,47 +96,89 @@ export default function DashboardPage() {
 
         <section className="kpi-grid">
           <div className="card kpi">
-            <div className="kpi-label">Active Agents</div>
-            <div className="kpi-value">{agents.length}</div>
+            <div className="kpi-label">Wallet Accounts</div>
+            <div className="kpi-value">{wallets.length}</div>
           </div>
           <div className="card kpi">
-            <div className="kpi-label">WebSocket</div>
-            <div className="kpi-value" style={{ color: wsConnected ? "#78f7c4" : "#ff9ba7" }}>
-              {wsConnected ? "Connected" : "Offline"}
+            <div className="kpi-label">Selected Wallet</div>
+            <div className="kpi-value" style={{ fontSize: 22 }}>
+              {selectedWallet ? selectedWallet.name : "None"}
             </div>
           </div>
           <div className="card kpi">
-            <div className="kpi-label">Successful Events</div>
-            <div className="kpi-value">{okEvents}</div>
+            <div className="kpi-label">SOL Balance</div>
+            <div className="kpi-value">{monitor ? `${lamportsToSol(monitor.balances.solLamports)} SOL` : "0 SOL"}</div>
           </div>
           <div className="card kpi">
-            <div className="kpi-label">Error Events</div>
-            <div className="kpi-value">{errorEvents}</div>
+            <div className="kpi-label">Transactions</div>
+            <div className="kpi-value">{monitor?.activity.totalTransactions ?? 0}</div>
           </div>
         </section>
 
         <section className="card controls">
           <div className="controls-row">
             <div className="field">
-              <label htmlFor="createCount">Create Count</label>
+              <label htmlFor="walletName">Wallet Name</label>
               <input
-                id="createCount"
+                id="walletName"
+                value={walletName}
+                onChange={(e) => setWalletName(e.target.value)}
+                style={{ width: 180 }}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="strategy">Strategy</label>
+              <select
+                id="strategy"
+                value={strategy}
+                onChange={(e) => setStrategy(e.target.value as "heuristic_ai" | "random")}
+                style={{ width: 160, height: 42, borderRadius: 10, border: "1px solid rgba(143, 173, 223, 0.35)" }}
+              >
+                <option value="heuristic_ai">heuristic_ai</option>
+                <option value="random">random</option>
+              </select>
+            </div>
+            <button
+              className="btn btn-primary"
+              disabled={busyAction !== null || walletName.trim().length < 2}
+              onClick={async () => {
+                try {
+                  setBusyAction("create");
+                  const created = await createWallet(walletName, strategy);
+                  await refreshWallets();
+                  setSelectedWalletId(created.wallet.walletId);
+                  setStatus(`Wallet "${created.wallet.name}" created.`, "ok");
+                } catch (err) {
+                  setStatus(err instanceof Error ? err.message : String(err), "error");
+                } finally {
+                  setBusyAction(null);
+                }
+              }}
+            >
+              Create Wallet
+            </button>
+
+            <div className="field">
+              <label htmlFor="fundLamports">Fund (lamports)</label>
+              <input
+                id="fundLamports"
                 type="number"
                 min={1}
-                max={20}
-                value={createCount}
-                onChange={(e) => setCreateCount(Math.max(1, Number(e.target.value) || 1))}
+                value={fundLamports}
+                onChange={(e) => setFundLamports(Math.max(1, Number(e.target.value) || 1))}
+                style={{ width: 150 }}
               />
             </div>
             <button
               className="btn btn-ghost"
-              disabled={busyAction !== null}
+              disabled={busyAction !== null || !selectedWallet}
               onClick={async () => {
+                if (!selectedWallet) return;
                 try {
-                  setBusyAction("create");
-                  await createAgents(createCount);
-                  await refreshAgents();
-                  setStatus(`Created ${createCount} agents.`, "ok");
+                  setBusyAction("fund");
+                  const funded = await fundWallet(selectedWallet.walletId, fundLamports);
+                  await refreshWalletDetails(selectedWallet.walletId);
+                  setStatus(`Wallet funded. Signature: ${shortPubkey(funded.signature)}`, "ok");
                 } catch (err) {
                   setStatus(err instanceof Error ? err.message : String(err), "error");
                 } finally {
@@ -160,37 +186,7 @@ export default function DashboardPage() {
                 }
               }}
             >
-              Create Agents
-            </button>
-
-            <div className="field">
-              <label htmlFor="setupAgents">Setup Agents</label>
-              <input
-                id="setupAgents"
-                type="number"
-                min={1}
-                max={50}
-                value={setupAgents}
-                onChange={(e) => setSetupAgents(Math.max(1, Number(e.target.value) || 1))}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              disabled={busyAction !== null}
-              onClick={async () => {
-                try {
-                  setBusyAction("setup");
-                  await setupDemo({ numAgents: setupAgents });
-                  await refreshAgents();
-                  setStatus(`Setup complete for ${setupAgents} agents.`, "ok");
-                } catch (err) {
-                  setStatus(err instanceof Error ? err.message : String(err), "error");
-                } finally {
-                  setBusyAction(null);
-                }
-              }}
-            >
-              Fund/Setup Demo
+              Fund Wallet
             </button>
 
             <div className="field">
@@ -216,15 +212,15 @@ export default function DashboardPage() {
             </div>
             <button
               className="btn btn-primary"
-              disabled={busyAction !== null}
+              disabled={busyAction !== null || !selectedWallet}
               onClick={async () => {
+                if (!selectedWallet) return;
                 try {
-                  setBusyAction("run");
-                  const result = await runDemo(rounds, amount);
-                  appendRunEvents(result);
-                  await refreshAgents();
+                  setBusyAction("execute");
+                  const result = await executeWallet(selectedWallet.walletId, rounds, amount);
+                  await refreshWalletDetails(selectedWallet.walletId);
                   setStatus(
-                    `Run complete: ${result.signatures.length} signatures, ${result.errors.length} errors.`,
+                    `Execution complete. ${result.signatures.length} tx, ${result.holds} holds, ${result.errors.length} errors.`,
                     result.errors.length > 0 ? "error" : "ok"
                   );
                 } catch (err) {
@@ -234,25 +230,7 @@ export default function DashboardPage() {
                 }
               }}
             >
-              Run Demo
-            </button>
-            <button
-              className="btn btn-ghost"
-              disabled={busyAction !== null}
-              onClick={async () => {
-                try {
-                  setBusyAction("stop");
-                  await stopDemo();
-                  setStatus("Demo stopped.", "ok");
-                  await refreshAgents();
-                } catch (err) {
-                  setStatus(err instanceof Error ? err.message : String(err), "error");
-                } finally {
-                  setBusyAction(null);
-                }
-              }}
-            >
-              Stop Demo
+              Execute Agent
             </button>
           </div>
           {statusMessage ? (
@@ -262,32 +240,32 @@ export default function DashboardPage() {
 
         <section className="app-grid">
           <article className="card panel">
-            <h3 className="display">Agent Fleet</h3>
-            {agents.length === 0 ? (
-              <p className="subtle">No agents yet. Create agents or run setup.</p>
+            <h3 className="display">Wallet Accounts</h3>
+            {wallets.length === 0 ? (
+              <p className="subtle">No wallet accounts yet. Create one wallet to begin.</p>
             ) : (
               <table className="agent-table">
                 <thead>
                   <tr>
-                    <th>Agent</th>
-                    <th>Pubkey</th>
-                    <th>Status</th>
+                    <th>Name</th>
+                    <th>Public Key</th>
                     <th>Strategy</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {agents.map((agent) => (
+                  {wallets.map((wallet) => (
                     <tr
-                      key={agent.agentId}
-                      className={`agent-row ${selected?.agentId === agent.agentId ? "active" : ""}`}
-                      onClick={() => setSelectedAgentId(agent.agentId)}
+                      key={wallet.walletId}
+                      className={`agent-row ${selectedWallet?.walletId === wallet.walletId ? "active" : ""}`}
+                      onClick={() => setSelectedWalletId(wallet.walletId)}
                     >
-                      <td>{agent.agentId}</td>
-                      <td className="mono">{shortPubkey(agent.publicKey)}</td>
+                      <td>{wallet.name}</td>
+                      <td className="mono">{shortPubkey(wallet.publicKey)}</td>
+                      <td>{wallet.strategy}</td>
                       <td>
-                        <span className={`status-chip ${agent.lastStatus}`}>{agent.lastStatus}</span>
+                        <span className={`status-chip ${wallet.status}`}>{wallet.status}</span>
                       </td>
-                      <td>{agent.strategy}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -296,36 +274,34 @@ export default function DashboardPage() {
           </article>
 
           <article className="card panel">
-            <h3 className="display">Agent Detail</h3>
-            {!selected ? (
-              <p className="subtle">Select an agent to inspect details.</p>
+            <h3 className="display">Wallet Monitor</h3>
+            {!monitor ? (
+              <p className="subtle">Select a wallet to inspect balances and activity.</p>
             ) : (
               <div className="detail-list">
                 <div className="detail-item">
-                  <small>Agent ID</small>
-                  <div className="mono">{selected.agentId}</div>
+                  <small>Wallet ID</small>
+                  <div className="mono">{monitor.wallet.walletId}</div>
                 </div>
                 <div className="detail-item">
                   <small>Public Key</small>
-                  <div className="mono">{selected.publicKey}</div>
+                  <div className="mono">{monitor.wallet.publicKey}</div>
                 </div>
                 <div className="detail-item">
-                  <small>Last Status</small>
-                  <div>{selected.lastStatus}</div>
+                  <small>SOL Balance</small>
+                  <div>{lamportsToSol(monitor.balances.solLamports)} SOL</div>
                 </div>
                 <div className="detail-item">
-                  <small>Last Signature</small>
-                  {selected.lastSignature ? (
-                    <a href={explorerUrl(selected.lastSignature)} target="_blank" rel="noreferrer" className="mono">
-                      {selected.lastSignature}
-                    </a>
-                  ) : (
-                    <div className="subtle">n/a</div>
-                  )}
+                  <small>Token Balances</small>
+                  <div>A: {monitor.balances.tokenA}</div>
+                  <div>B: {monitor.balances.tokenB}</div>
                 </div>
                 <div className="detail-item">
-                  <small>Error</small>
-                  <div>{selected.lastError ?? "none"}</div>
+                  <small>Activity</small>
+                  <div>Total: {monitor.activity.totalTransactions}</div>
+                  <div>Ok: {monitor.activity.okCount}</div>
+                  <div>Hold: {monitor.activity.holdCount}</div>
+                  <div>Errors: {monitor.activity.errorCount}</div>
                 </div>
               </div>
             )}
@@ -333,32 +309,31 @@ export default function DashboardPage() {
         </section>
 
         <section className="card panel" style={{ marginTop: 14 }}>
-          <h3 className="display">Transaction Log</h3>
-          {events.length === 0 ? (
-            <p className="subtle">No events yet. Run setup and execution to populate the log.</p>
+          <h3 className="display">Transaction Monitor</h3>
+          {transactions.length === 0 ? (
+            <p className="subtle">No transactions yet for selected wallet.</p>
           ) : (
             <ul className="log-list">
-              {events
-                .slice(-30)
-                .reverse()
-                .map((evt, index) => (
-                  <li key={`${evt.timestamp}-${index}`} className="log-item">
-                    <div>
-                      <span className="subtle">{new Date(evt.timestamp).toLocaleString()}</span> ·{" "}
-                      <span className="mono">{evt.agentId}</span> · {evt.action}
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      <strong className={evt.status === "ok" ? "ok" : "error"}>{evt.status}</strong>{" "}
-                      {evt.signature ? (
-                        <a href={explorerUrl(evt.signature)} target="_blank" rel="noreferrer" className="mono">
-                          {evt.signature}
-                        </a>
-                      ) : (
-                        <span>{evt.err}</span>
-                      )}
-                    </div>
-                  </li>
-                ))}
+              {transactions.slice(0, 40).map((tx, idx) => (
+                <li key={`${tx.timestamp}-${idx}`} className="log-item">
+                  <div>
+                    <span className="subtle">{new Date(tx.timestamp).toLocaleString()}</span> ·{" "}
+                    <span className="mono">{tx.action}</span> · amount {tx.amount}
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <strong className={tx.status === "ok" ? "ok" : tx.status === "hold" ? "subtle" : "error"}>
+                      {tx.status}
+                    </strong>{" "}
+                    {tx.signature ? (
+                      <a href={explorerUrl(tx.signature)} target="_blank" rel="noreferrer" className="mono">
+                        {tx.signature}
+                      </a>
+                    ) : (
+                      <span>{tx.reason ?? tx.error ?? ""}</span>
+                    )}
+                  </div>
+                </li>
+              ))}
             </ul>
           )}
         </section>

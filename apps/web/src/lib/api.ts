@@ -9,6 +9,43 @@ export type Agent = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001";
 
+export type WalletAccount = {
+  walletId: string;
+  name: string;
+  agentId: string;
+  publicKey: string;
+  strategy: "heuristic_ai" | "random";
+  status: "idle" | "active" | "error";
+  createdAt: string;
+};
+
+export type WalletTransaction = {
+  walletId: string;
+  agentId: string;
+  timestamp: string;
+  action: string;
+  amount: number;
+  status: "ok" | "error" | "hold";
+  signature?: string;
+  reason?: string;
+  error?: string;
+};
+
+export type WalletMonitor = {
+  wallet: WalletAccount;
+  balances: {
+    solLamports: number;
+    tokenA: string;
+    tokenB: string;
+  };
+  activity: {
+    totalTransactions: number;
+    okCount: number;
+    errorCount: number;
+    holdCount: number;
+  };
+};
+
 export type DemoSetupPayload = {
   numAgents?: number;
   seedAmount?: number;
@@ -98,4 +135,64 @@ export async function stopDemo(): Promise<DemoStopResponse> {
     throw await parseApiError(res);
   }
   return (await res.json()) as DemoStopResponse;
+}
+
+export async function createWallet(name: string, strategy: "heuristic_ai" | "random" = "heuristic_ai") {
+  const res = await fetch(`${API_BASE}/wallets`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, strategy })
+  });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as { wallet: WalletAccount };
+}
+
+export async function listWallets() {
+  const res = await fetch(`${API_BASE}/wallets`, { cache: "no-store" });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as { wallets: WalletAccount[] };
+}
+
+export async function fundWallet(walletId: string, lamports: number) {
+  const res = await fetch(`${API_BASE}/wallets/${walletId}/fund`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ lamports })
+  });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as { ok: boolean; signature: string };
+}
+
+export async function executeWallet(walletId: string, rounds: number, amount: number) {
+  const res = await fetch(`${API_BASE}/wallets/${walletId}/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rounds, amount })
+  });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as { ok: boolean; rounds: number; signatures: string[]; errors: string[]; holds: number };
+}
+
+export async function getWalletTransactions(walletId: string) {
+  const res = await fetch(`${API_BASE}/wallets/${walletId}/transactions`, { cache: "no-store" });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as { walletId: string; transactions: WalletTransaction[] };
+}
+
+export async function getWalletMonitor(walletId: string) {
+  const res = await fetch(`${API_BASE}/wallets/${walletId}/monitor`, { cache: "no-store" });
+  if (!res.ok) {
+    throw await parseApiError(res);
+  }
+  return (await res.json()) as WalletMonitor;
 }

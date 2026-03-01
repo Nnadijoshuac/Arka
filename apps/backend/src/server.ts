@@ -13,6 +13,7 @@ import { AgentRunner } from "./agents/agentRunner.js";
 import { createStrategyFactory } from "./agents/strategyFactory.js";
 import { registerAgentRoutes } from "./routes/agents.js";
 import { registerDemoRoutes } from "./routes/demo.js";
+import { registerWalletRoutes } from "./routes/wallets.js";
 import { SpendDb } from "./policy/spendDb.js";
 
 export async function buildServer() {
@@ -57,6 +58,15 @@ export async function buildServer() {
     signerProvider,
     programId: new PublicKey(config.PROGRAM_ID),
     demoSwapAmount: config.DEMO_SWAP_AMOUNT
+  });
+  await registerWalletRoutes(app, {
+    runner,
+    wallet,
+    protocol,
+    connection,
+    signerProvider,
+    programId: new PublicKey(config.PROGRAM_ID),
+    config
   });
   app.get("/health", async () => ({ ok: true }));
 
