@@ -101,7 +101,7 @@ export default function DashboardPage() {
       <div className="container">
         <header className="app-header">
           <div>
-            <div className="pill">Arka Control Plane</div>
+            <div className="pill">Autarch Control Plane</div>
             <h1 className="display">Agent Wallet Operations Dashboard</h1>
             <p>Provision, fund, run, and inspect autonomous wallet transactions on Solana devnet.</p>
           </div>
