@@ -2,11 +2,16 @@
 seeds = false
 skip-lint = false
 
+[workspace]
+members = [
+  "programs/agent_mock_defi/programs/agent_mock_defi"
+]
+
 [programs.localnet]
-agent_mock_defi = "Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw"
+agent_mock_defi = "XmnLz4Ez9CCJn6RnvGc6Z1J4sDdFqMjB2tZgkkA7sFP"
 
 [programs.devnet]
-agent_mock_defi = "Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw"
+agent_mock_defi = "XmnLz4Ez9CCJn6RnvGc6Z1J4sDdFqMjB2tZgkkA7sFP"
 
 [provider]
 cluster = "Localnet"

@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("Ezf9KUJyoGShdpyRchvBoJWJX1cXzeiULn55pjkhDYvw");
+declare_id!("XmnLz4Ez9CCJn6RnvGc6Z1J4sDdFqMjB2tZgkkA7sFP");
 
 #[program]
 pub mod agent_mock_defi {
@@ -24,4 +24,5 @@ pub mod agent_mock_defi {
         instructions::swap::swap_handler(ctx, amount_in, 2)
     }
 }
+
 
