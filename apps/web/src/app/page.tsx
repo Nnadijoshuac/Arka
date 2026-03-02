@@ -70,37 +70,39 @@ export default function LandingPage() {
         </nav>
       </header>
 
-      <section className="minimal-hero container">
-        <div className="minimal-copy">
-          <p className="minimal-kicker">AGENT WALLET INFRASTRUCTURE</p>
-          <h1>
-            <span className="hero-line">Financial Infrastructure</span>
-            <span className="hero-line">for Autonomous Agents</span>
-          </h1>
-          <p className="minimal-subtext">
-            Create agent wallets, fund them, execute policy-safe transactions, and monitor on-chain activity in one
-            place.
-          </p>
-          <div className="minimal-actions">
-            <Link href="/app" className="minimal-btn minimal-btn-primary">
-              Launch App
-            </Link>
-            <Link href="#" className="minimal-btn minimal-btn-secondary">
-              Read Docs
-            </Link>
-          </div>
-          <a href="#overview" className="minimal-text-link">
-            Explore capabilities
-          </a>
-        </div>
-
-        <div className="minimal-visual" aria-hidden="true">
-          <div className="image-stack">
-            <Image src="/5.png" alt="" width={520} height={680} className="stack-back" priority />
-            <Image src="/6.png" alt="" width={520} height={680} className="stack-front" priority />
+      <section className="minimal-hero-shell">
+        <div className="minimal-hero container">
+          <div className="minimal-copy">
+            <p className="minimal-kicker">AGENT WALLET INFRASTRUCTURE</p>
+            <h1>
+              <span className="hero-line">Financial Infrastructure</span>
+              <span className="hero-line">for Autonomous Agents</span>
+            </h1>
+            <p className="minimal-subtext">
+              Create and fund agent wallets,{"\u00A0"}execute policy-safe transactions, and monitor on-chain activity
+              from one dashboard.
+            </p>
+            <div className="minimal-actions">
+              <Link href="/app" className="minimal-btn minimal-btn-primary">
+                Launch App
+              </Link>
+              <Link href="#" className="minimal-btn minimal-btn-secondary">
+                Read Docs
+              </Link>
+            </div>
+            <a href="#overview" className="minimal-text-link">
+              Explore capabilities
+            </a>
           </div>
         </div>
       </section>
+
+      <div className="minimal-floating-media" aria-hidden="true">
+        <div className="image-stack">
+          <Image src="/5.png" alt="" width={520} height={680} className="stack-back" priority />
+          <Image src="/6.png" alt="" width={520} height={680} className="stack-front" priority />
+        </div>
+      </div>
 
       <section id="overview" className="minimal-strip container" aria-label="Platform capabilities">
         {features.map((feature) => (
