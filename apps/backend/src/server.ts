@@ -104,27 +104,38 @@ async function readBody(req: IncomingMessage): Promise<Buffer | undefined> {
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  const { app } = await vercelServerPromise;
-  const payload = await readBody(req);
-  const reply = await app.inject({
-    method: req.method as
-      | "GET"
-      | "POST"
-      | "PUT"
-      | "PATCH"
-      | "DELETE"
-      | "HEAD"
-      | "OPTIONS",
-    url: req.url ?? "/",
-    headers: req.headers as Record<string, string>,
-    payload
-  });
+  try {
+    const { app } = await vercelServerPromise;
+    const payload = await readBody(req);
+    const injectPromise = app.inject({
+      method: req.method as
+        | "GET"
+        | "POST"
+        | "PUT"
+        | "PATCH"
+        | "DELETE"
+        | "HEAD"
+        | "OPTIONS",
+      url: req.url ?? "/",
+      headers: req.headers as Record<string, string>,
+      payload
+    });
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request timed out inside Vercel handler")), 8000);
+    });
+    const reply = await Promise.race([injectPromise, timeoutPromise]);
 
-  res.statusCode = reply.statusCode;
-  for (const [key, value] of Object.entries(reply.headers)) {
-    if (value !== undefined) {
-      res.setHeader(key, value);
+    res.statusCode = reply.statusCode;
+    for (const [key, value] of Object.entries(reply.headers)) {
+      if (value !== undefined) {
+        res.setHeader(key, value);
+      }
     }
+    res.end(reply.body);
+  } catch (error) {
+    res.statusCode = 500;
+    res.setHeader("content-type", "application/json");
+    const message = error instanceof Error ? error.message : String(error);
+    res.end(JSON.stringify({ ok: false, error: message }));
   }
-  res.end(reply.body);
 }
