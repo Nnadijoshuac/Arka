@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { PublicKey } from "@solana/web3.js";
+import { join } from "node:path";
 import { loadConfig } from "./config.js";
 import { createConnection } from "./solana/connection.js";
 import { FileKeystore } from "./keystore/keystore.js";
@@ -23,8 +24,8 @@ export async function buildServer() {
   await app.register(websocket);
 
   const connection = createConnection(config.SOLANA_RPC_URL, config.SOLANA_WS_URL);
-  const keystore = new FileKeystore("data/keystore.json", config.KEYSTORE_MASTER_KEY);
-  const spendDb = new SpendDb("data/spend-db.json");
+  const keystore = new FileKeystore(join(config.DATA_DIR, "keystore.json"), config.KEYSTORE_MASTER_KEY);
+  const spendDb = new SpendDb(join(config.DATA_DIR, "spend-db.json"));
   const signerProvider = new LocalEncryptedKeystoreSignerProvider(keystore);
   const policy = new TxPolicyEngine(config.PROGRAM_ID, {
     maxLamportsPerTransfer: 2_000_000_000,
