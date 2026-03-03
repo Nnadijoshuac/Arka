@@ -655,16 +655,26 @@ button:focus-visible {
 }
 
 .minimal-brand {
-  gap: 12px;
-  font-size: 1.35rem;
+  gap: 8px;
+  font-size: 1.3rem;
+  line-height: 1;
   color: #141414;
 }
 
 .minimal-brand-logo {
-  height: 54px;
+  height: 60px;
   width: auto;
   object-fit: contain;
   border-radius: 0;
+  display: block;
+  flex-shrink: 0;
+}
+
+.minimal-brand-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  margin-top: 2px;
 }
 
 .minimal-nav-links {
@@ -735,27 +745,42 @@ button:focus-visible {
   border-radius: 999px;
   border: 1px solid transparent;
   font-weight: 600;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  box-shadow:
+    8px 8px 18px rgba(214, 198, 182, 0.45),
+    -8px -8px 18px rgba(255, 255, 255, 0.9);
 }
 
 .minimal-btn-primary {
   background: #ff6a00;
   color: #fff;
+  border-color: rgba(227, 90, 0, 0.55);
+  box-shadow:
+    0 10px 18px rgba(92, 47, 16, 0.2),
+    0 2px 4px rgba(92, 47, 16, 0.14);
 }
 
-.minimal-btn-primary:hover {
+.minimal-btn-primary:active {
   background: #e85f00;
+  transform: translateY(1px);
+  box-shadow:
+    0 5px 10px rgba(92, 47, 16, 0.22),
+    inset 0 2px 4px rgba(120, 52, 14, 0.26);
 }
 
 .minimal-btn-secondary {
-  background: transparent;
-  border-color: rgba(20, 20, 20, 0.16);
+  background: #faf6f1;
+  border-color: rgba(20, 20, 20, 0.08);
   color: #141414;
 }
 
-.minimal-btn-secondary:hover {
-  background: #fff;
-  border-color: rgba(20, 20, 20, 0.24);
+.minimal-btn-secondary:active {
+  background: #f3eee8;
+  border-color: rgba(20, 20, 20, 0.14);
+  transform: translateY(1px);
+  box-shadow:
+    inset 4px 4px 10px rgba(216, 200, 183, 0.34),
+    inset -4px -4px 10px rgba(255, 255, 255, 0.72);
 }
 
 .minimal-text-link {
@@ -802,7 +827,10 @@ button:focus-visible {
 }
 
 .stack-back {
-  transform: translate(-12px, 10px);
+  transform: translate(
+    calc(20px + var(--hero-parallax-back-x, 0px)),
+    calc(10px + var(--hero-parallax-back-y, 0px))
+  );
   z-index: 1;
 }
 
@@ -890,7 +918,7 @@ button:focus-visible {
   }
 
   .minimal-brand-logo {
-    height: 50px;
+    height: 54px;
   }
 
   .minimal-brand-text {
@@ -909,6 +937,11 @@ button:focus-visible {
     padding-top: 40px;
   }
 
+  .minimal-hero-shell .minimal-copy {
+    align-items: center;
+    text-align: center;
+  }
+
   .minimal-copy h1 {
     font-size: clamp(2rem, 10vw, 2.7rem);
   }
@@ -920,6 +953,12 @@ button:focus-visible {
   .minimal-subtext {
     font-size: 1rem;
     line-height: 1.62;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .minimal-hero-shell .minimal-actions {
+    justify-content: center;
   }
 
   .minimal-visual {
@@ -971,27 +1010,31 @@ button:focus-visible {
 }
 
 .minimal-hero-shell .minimal-copy {
-  max-width: 620px;
+  max-width: 640px;
   padding-right: clamp(0px, 30vw, 360px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
+  margin-top: -22px;
 }
 
 .minimal-hero-shell .minimal-copy h1 {
-  max-width: 13ch;
+  max-width: 15ch;
   margin-top: 14px;
-  line-height: 1.04;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 .minimal-hero-shell .minimal-subtext {
-  max-width: 64ch;
-  margin-top: 20px;
+  max-width: 50ch;
+  margin-top: 18px;
+  line-height: 1.62;
 }
 
 .minimal-hero-shell .minimal-actions {
-  margin-top: 26px;
+  margin-top: 22px;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -1008,16 +1051,16 @@ button:focus-visible {
 }
 
 .minimal-hero-shell .minimal-text-link {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .minimal-floating-media {
   position: absolute;
-  right: 0;
+  right: 22px;
   top: 50%;
-  transform: translateY(-50%);
-  width: min(38vw, 520px);
-  min-height: 520px;
+  transform: translateY(-44%);
+  width: min(34vw, 450px);
+  min-height: 450px;
   margin-right: 0;
   pointer-events: none;
   z-index: 1;
@@ -1033,6 +1076,11 @@ button:focus-visible {
 .minimal-floating-media .stack-front {
   border-radius: 0;
   box-shadow: none;
+}
+
+.minimal-floating-media .stack-front {
+  transform: translate(var(--hero-parallax-x, 0), calc(var(--hero-parallax-y, 0) + 10px));
+  will-change: transform;
 }
 
 @media (max-width: 1000px) {

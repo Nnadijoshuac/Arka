@@ -1,7 +1,69 @@
+ "use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 export default function LandingPage() {
+  const backImageRef = useRef<HTMLImageElement | null>(null);
+  const frontImageRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const backImage = backImageRef.current;
+    const image = frontImageRef.current;
+    if (!image || !backImage) return;
+    if (window.matchMedia("(max-width: 1000px)").matches) return;
+
+    let raf = 0;
+    let currentFrontX = 0;
+    let currentFrontY = 0;
+    let targetFrontX = 0;
+    let targetFrontY = 0;
+    let currentBackX = 0;
+    let currentBackY = 0;
+    let targetBackX = 0;
+    let targetBackY = 0;
+
+    const animate = () => {
+      currentFrontX += (targetFrontX - currentFrontX) * 0.12;
+      currentFrontY += (targetFrontY - currentFrontY) * 0.12;
+      currentBackX += (targetBackX - currentBackX) * 0.1;
+      currentBackY += (targetBackY - currentBackY) * 0.1;
+
+      image.style.setProperty("--hero-parallax-x", `${currentFrontX.toFixed(2)}px`);
+      image.style.setProperty("--hero-parallax-y", `${currentFrontY.toFixed(2)}px`);
+      backImage.style.setProperty("--hero-parallax-back-x", `${currentBackX.toFixed(2)}px`);
+      backImage.style.setProperty("--hero-parallax-back-y", `${currentBackY.toFixed(2)}px`);
+      raf = window.requestAnimationFrame(animate);
+    };
+
+    const onMove = (event: MouseEvent) => {
+      const nx = (event.clientX / window.innerWidth - 0.5) * 2;
+      const ny = (event.clientY / window.innerHeight - 0.5) * 2;
+      targetFrontX = -nx * 7;
+      targetFrontY = -ny * 7;
+      targetBackX = nx * 3;
+      targetBackY = 0;
+    };
+
+    const onLeave = () => {
+      targetFrontX = 0;
+      targetFrontY = 0;
+      targetBackX = 0;
+      targetBackY = 0;
+    };
+
+    raf = window.requestAnimationFrame(animate);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseleave", onLeave);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
   const features = [
     {
       title: "Programmatic Wallets",
@@ -61,7 +123,7 @@ export default function LandingPage() {
           <Link href="#" className="minimal-nav-link">
             Docs
           </Link>
-          <Link href="#" className="minimal-nav-link">
+          <Link href="https://github.com/Nnadijoshuac/AutarchDistrict" className="minimal-nav-link" target="_blank" rel="noreferrer">
             GitHub
           </Link>
           <Link href="/app" className="minimal-btn minimal-btn-primary">
@@ -99,8 +161,8 @@ export default function LandingPage() {
 
       <div className="minimal-floating-media" aria-hidden="true">
         <div className="image-stack">
-          <Image src="/5.png" alt="" width={520} height={680} className="stack-back" priority />
-          <Image src="/6.png" alt="" width={520} height={680} className="stack-front" priority />
+          <Image ref={backImageRef} src="/5.png" alt="" width={520} height={680} className="stack-back" priority />
+          <Image ref={frontImageRef} src="/6.png" alt="" width={520} height={680} className="stack-front" priority />
         </div>
       </div>
 
