@@ -13,6 +13,7 @@ export default function LandingPage() {
     const image = frontImageRef.current;
     if (!image || !backImage) return;
     if (window.matchMedia("(max-width: 1000px)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let raf = 0;
     let currentFrontX = 0;
@@ -54,7 +55,7 @@ export default function LandingPage() {
     };
 
     raf = window.requestAnimationFrame(animate);
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseleave", onLeave);
 
     return () => {
