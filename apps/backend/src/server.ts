@@ -21,14 +21,10 @@ import { SpendDb } from "./policy/spendDb.js";
 export async function buildServer() {
   const config = loadConfig();
   const app = Fastify({ logger: { level: config.LOG_LEVEL } });
-  const corsOrigin =
-    config.WEB_ORIGIN.trim() === "*"
-      ? true
-      : config.WEB_ORIGIN.split(",")
-          .map((value) => value.trim())
-          .filter(Boolean);
-
-  await app.register(cors, { origin: corsOrigin });
+  // Hackathon-safe default: allow cross-origin browser requests so hosted
+  // frontends (Vercel/Render previews) can call the API without CORS mismatch.
+  // You can tighten this later with explicit origin allowlists.
+  await app.register(cors, { origin: true });
   if (!process.env.VERCEL) {
     await app.register(websocket);
   }
