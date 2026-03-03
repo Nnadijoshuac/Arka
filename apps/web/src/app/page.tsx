@@ -120,7 +120,12 @@ export default function LandingPage() {
           <span className="minimal-brand-text">Autarch District</span>
         </div>
         <nav className="minimal-nav-links" aria-label="Primary navigation">
-          <Link href="#" className="minimal-nav-link">
+          <Link
+            href="https://github.com/Nnadijoshuac/AutarchDistrict#readme"
+            className="minimal-nav-link"
+            target="_blank"
+            rel="noreferrer"
+          >
             Docs
           </Link>
           <Link href="https://github.com/Nnadijoshuac/AutarchDistrict" className="minimal-nav-link" target="_blank" rel="noreferrer">
@@ -148,7 +153,12 @@ export default function LandingPage() {
               <Link href="/app" className="minimal-btn minimal-btn-primary">
                 Launch App
               </Link>
-              <Link href="#" className="minimal-btn minimal-btn-secondary">
+              <Link
+                href="https://github.com/Nnadijoshuac/AutarchDistrict#readme"
+                className="minimal-btn minimal-btn-secondary"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Read Docs
               </Link>
             </div>
