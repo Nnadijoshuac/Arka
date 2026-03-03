@@ -8,6 +8,10 @@ export default function LandingPage() {
   const backImageRef = useRef<HTMLImageElement | null>(null);
   const frontImageRef = useRef<HTMLImageElement | null>(null);
 
+  function warmBackendInBackground() {
+    void fetch("/api/backend/health", { cache: "no-store" }).catch(() => undefined);
+  }
+
   useEffect(() => {
     const backImage = backImageRef.current;
     const image = frontImageRef.current;
@@ -132,7 +136,7 @@ export default function LandingPage() {
           <Link href="https://github.com/Nnadijoshuac/AutarchDistrict" className="minimal-nav-link" target="_blank" rel="noreferrer">
             GitHub
           </Link>
-          <Link href="/app" className="minimal-btn minimal-btn-primary">
+          <Link href="/app" className="minimal-btn minimal-btn-primary" onClick={warmBackendInBackground}>
             Launch App
           </Link>
         </nav>
@@ -151,7 +155,7 @@ export default function LandingPage() {
               from one dashboard.
             </p>
             <div className="minimal-actions">
-              <Link href="/app" className="minimal-btn minimal-btn-primary">
+              <Link href="/app" className="minimal-btn minimal-btn-primary" onClick={warmBackendInBackground}>
                 Launch App
               </Link>
               <Link

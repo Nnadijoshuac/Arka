@@ -11,7 +11,7 @@ It provides:
 
 ## Live Deployment
 
-- Frontend: `https://autarchdistrict.vercel.app` (update if changed)
+- Frontend: `https://autarchdistrict.vercel.app`
 - Backend API: `https://autarchdistrict.onrender.com`
 - Health check: `https://autarchdistrict.onrender.com/health`
 
