@@ -7,7 +7,7 @@ export type Agent = {
   lastSignature?: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:3001";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api/backend";
 
 export type DemoSetupPayload = {
   numAgents?: number;
