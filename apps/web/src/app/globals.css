@@ -832,6 +832,7 @@ button:focus-visible {
     calc(10px + var(--hero-parallax-back-y, 0px))
   );
   z-index: 1;
+  transition: transform 180ms ease-out;
 }
 
 .stack-front {
@@ -1081,6 +1082,7 @@ button:focus-visible {
 .minimal-floating-media .stack-front {
   transform: translate(var(--hero-parallax-x, 0), calc(var(--hero-parallax-y, 0) + 10px));
   will-change: transform;
+  transition: transform 150ms ease-out;
 }
 
 @media (max-width: 1000px) {
