@@ -11,7 +11,7 @@ const envSchema = z.object({
   DEMO_SWAP_AMOUNT: z.coerce.number().int().positive().default(1000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   PORT: z.coerce.number().int().positive().default(3001),
-  WEB_ORIGIN: z.string().url().default("http://localhost:3000")
+  WEB_ORIGIN: z.string().min(1).default("http://localhost:3000")
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

@@ -21,8 +21,14 @@ import { SpendDb } from "./policy/spendDb.js";
 export async function buildServer() {
   const config = loadConfig();
   const app = Fastify({ logger: { level: config.LOG_LEVEL } });
+  const corsOrigin =
+    config.WEB_ORIGIN.trim() === "*"
+      ? true
+      : config.WEB_ORIGIN.split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
 
-  await app.register(cors, { origin: config.WEB_ORIGIN });
+  await app.register(cors, { origin: corsOrigin });
   if (!process.env.VERCEL) {
     await app.register(websocket);
   }
