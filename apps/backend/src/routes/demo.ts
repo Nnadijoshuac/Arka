@@ -15,6 +15,7 @@ import type { Connection } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { Notifier } from "../notifications/notifier.js";
 
 type DemoContext = {
   runner: AgentRunner;
@@ -24,6 +25,7 @@ type DemoContext = {
   signerProvider: SignerProvider;
   programId: PublicKey;
   demoSwapAmount: number;
+  notifier?: Notifier | null;
 };
 
 type DemoState = {
@@ -179,6 +181,11 @@ export async function registerDemoRoutes(app: FastifyInstance, ctx: DemoContext)
     state.poolAuthority = poolAuthorityPda;
     state.vaultA = vaultA;
     state.vaultB = vaultB;
+    void ctx.notifier
+      ?.send(
+        `Autarch District\nDemo setup complete.\nAgents: ${setupAgents.length}\nMintA: ${mintA.toBase58()}\nMintB: ${mintB.toBase58()}`
+      )
+      .catch(() => undefined);
 
     return {
       ok: true,
@@ -233,11 +240,17 @@ export async function registerDemoRoutes(app: FastifyInstance, ctx: DemoContext)
     }
 
     state.signatures.push(...signatures);
+    void ctx.notifier
+      ?.send(
+        `Autarch District\nDemo run complete.\nRounds: ${parsed.rounds}\nAmount: ${amount}\nSuccess: ${signatures.length}\nErrors: ${errors.length}`
+      )
+      .catch(() => undefined);
     return { ok: true, rounds: parsed.rounds, amount, signatures, errors };
   });
 
   app.post("/demo/stop", async () => {
     ctx.runner.stop();
+    void ctx.notifier?.send("Autarch District\nDemo stopped. Agent execution halted.").catch(() => undefined);
     return { ok: true, signatures: state.signatures.slice(-50) };
   });
 }

@@ -17,10 +17,12 @@ import { RandomSwapStrategy } from "./agents/strategies/randomSwap.js";
 import { registerAgentRoutes } from "./routes/agents.js";
 import { registerDemoRoutes } from "./routes/demo.js";
 import { SpendDb } from "./policy/spendDb.js";
+import { createTelegramNotifier } from "./notifications/telegram.js";
 
 export async function buildServer() {
   const config = loadConfig();
   const app = Fastify({ logger: { level: config.LOG_LEVEL } });
+  const notifier = createTelegramNotifier(config, app.log);
   // Hackathon-safe default: allow cross-origin browser requests so hosted
   // frontends (Vercel/Render previews) can call the API without CORS mismatch.
   // You can tighten this later with explicit origin allowlists.
@@ -59,9 +61,15 @@ export async function buildServer() {
     for (const ws of sockets) {
       ws.send(serialized);
     }
+    if (config.TELEGRAM_NOTIFY_AGENT_EVENTS) {
+      const line = `Autarch District\nAgent: ${evt.agentId}\nAction: ${evt.action}\nStatus: ${evt.status}${
+        evt.signature ? `\nSig: ${evt.signature}` : ""
+      }${evt.err ? `\nError: ${evt.err}` : ""}`;
+      void notifier?.send(line).catch(() => undefined);
+    }
   });
 
-  await registerAgentRoutes(app, runner);
+  await registerAgentRoutes(app, runner, notifier);
   await registerDemoRoutes(app, {
     runner,
     wallet,
@@ -69,7 +77,8 @@ export async function buildServer() {
     connection,
     signerProvider,
     programId: new PublicKey(config.PROGRAM_ID),
-    demoSwapAmount: config.DEMO_SWAP_AMOUNT
+    demoSwapAmount: config.DEMO_SWAP_AMOUNT,
+    notifier
   });
   app.get("/health", async () => ({ ok: true }));
 

@@ -11,7 +11,11 @@ const envSchema = z.object({
   DEMO_SWAP_AMOUNT: z.coerce.number().int().positive().default(1000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   PORT: z.coerce.number().int().positive().default(3001),
-  WEB_ORIGIN: z.string().min(1).default("http://localhost:3000")
+  WEB_ORIGIN: z.string().min(1).default("http://localhost:3000"),
+  TELEGRAM_NOTIFICATIONS_ENABLED: z.coerce.boolean().default(false),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_ID: z.string().optional(),
+  TELEGRAM_NOTIFY_AGENT_EVENTS: z.coerce.boolean().default(false)
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

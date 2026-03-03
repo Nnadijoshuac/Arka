@@ -1,17 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { AgentRunner } from "../agents/agentRunner.js";
+import type { Notifier } from "../notifications/notifier.js";
 
 const createAgentsSchema = z.object({
   count: z.number().int().positive().max(50).default(1)
 });
 
-export async function registerAgentRoutes(app: FastifyInstance, runner: AgentRunner) {
+export async function registerAgentRoutes(app: FastifyInstance, runner: AgentRunner, notifier?: Notifier | null) {
   app.get("/agents", async () => ({ agents: runner.listAgents() }));
 
   app.post("/agents", async (req) => {
     const parsed = createAgentsSchema.parse(req.body ?? {});
     const agents = await runner.createAgents(parsed.count);
+    void notifier?.send(`Autarch District\nProvisioned ${agents.length} new agent wallet(s).`).catch(() => undefined);
     return { agents };
   });
 }
