@@ -13,6 +13,7 @@ export type RunnerEvent = {
   agentId: string;
   action: string;
   status: "ok" | "error";
+  durationMs?: number;
   signature?: string;
   err?: string;
 };
@@ -144,6 +145,7 @@ export class AgentRunner extends EventEmitter {
       return;
     }
 
+    const startedAt = Date.now();
     try {
       const signature = await this.limiter.schedule(async () => {
         const ix = this.protocol.buildSwapInstruction(
@@ -162,6 +164,7 @@ export class AgentRunner extends EventEmitter {
         agentId,
         action: `${action.kind}:${action.direction}:${action.amount}`,
         status: "ok",
+        durationMs: Date.now() - startedAt,
         signature
       } satisfies RunnerEvent);
     } catch (error) {
@@ -178,6 +181,7 @@ export class AgentRunner extends EventEmitter {
         agentId,
         action: `${action.kind}:${action.direction}:${action.amount}`,
         status: "error",
+        durationMs: Date.now() - startedAt,
         err: message
       } satisfies RunnerEvent);
     }
