@@ -1,10 +1,5 @@
-import pino from "pino";
+import { createLogger as createStructuredLogger } from "../logger.js";
 
 export function createLogger(level: string) {
-  return pino({
-    level,
-    redact: ["secretKey", "KEYSTORE_MASTER_KEY", "KMS_MASTER_KEY_BASE64"],
-    base: undefined,
-    timestamp: pino.stdTimeFunctions.isoTime
-  });
+  return createStructuredLogger(level, "backend");
 }

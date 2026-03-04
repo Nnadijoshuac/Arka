@@ -5,6 +5,7 @@ import { PublicKey } from "@solana/web3.js";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Buffer } from "node:buffer";
+import pino from "pino";
 import { loadConfig } from "./config.js";
 import { createConnection } from "./solana/connection.js";
 import { DevKmsProvider } from "./security/devKmsProvider.js";
@@ -21,17 +22,29 @@ import { SpendDb } from "./policy/spendDb.js";
 import { TxPolicyEngine, type PolicyViolationDetail } from "./policy/txPolicyEngine.js";
 import { createTelegramNotifier } from "./notifications/telegram.js";
 import { AgentStore } from "./persistence/agentStore.js";
+import { AppMetrics } from "./metrics.js";
 import {
   ATA_PROGRAM_ID,
   COMPUTE_BUDGET_PROGRAM_ID,
   SPL_TOKEN_PROGRAM_ID,
   SYSTEM_PROGRAM_ID
 } from "./solana/constants.js";
+import { CircuitBreaker } from "./observability/circuitBreaker.js";
 
 export async function buildServer() {
   const config = loadConfig();
-  const app = Fastify({ logger: { level: config.LOG_LEVEL } });
+  const app = Fastify({
+    logger: {
+      level: config.LOG_LEVEL,
+      base: { module: "server" },
+      timestamp: pino.stdTimeFunctions.isoTime,
+      messageKey: "message",
+      redact: ["secretKey", "KEYSTORE_MASTER_KEY", "KMS_MASTER_KEY_BASE64"]
+    }
+  });
   const notifier = createTelegramNotifier(config, app.log);
+  const metrics = new AppMetrics();
+  const circuitBreaker = new CircuitBreaker(0.4, 60_000, 10);
   await app.register(cors, { origin: true });
   if (!process.env.VERCEL) {
     await app.register(websocket);
@@ -83,6 +96,7 @@ export async function buildServer() {
       persistedAgents.map((agent) => ({ agentId: agent.agentId, publicKey: agent.publicKey }))
     );
     runner.resumeActiveRunners(persistedAgents.filter((agent) => agent.isActive).map((agent) => agent.agentId));
+    metrics.setActiveAgents(persistedAgents.filter((agent) => agent.isActive).length);
     app.log.info({ count: restoredAgents.length }, "Restored agents from database.");
   } else {
     const restoredAgents = runner.restoreAgents(await keystore.listSigners());
@@ -96,6 +110,7 @@ export async function buildServer() {
       }
       app.log.info({ count: restoredAgents.length }, "Restored agents from keystore.");
     }
+    metrics.setActiveAgents(0);
   }
 
   const sockets = new Set<{ send: (msg: string) => void }>();
@@ -128,10 +143,37 @@ export async function buildServer() {
         const parsed = JSON.parse(evt.err) as PolicyViolationDetail;
         if (parsed.code?.startsWith("DENY_")) {
           void agentStore.recordPolicyViolation(parsed);
+          metrics.incPolicyViolation();
         }
       } catch {
         // ignore non-policy errors
       }
+    }
+
+    if (evt.durationMs !== undefined) {
+      metrics.observeRpcLatency(evt.durationMs);
+    }
+    if (evt.status === "ok") {
+      metrics.incTxSuccess();
+    } else {
+      metrics.incTxFailure();
+    }
+
+    if (circuitBreaker.record(evt.status === "ok")) {
+      runner.stop();
+      metrics.setActiveAgents(0);
+      const criticalEvt = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "critical",
+        type: "CIRCUIT_BREAKER_TRIPPED",
+        message: "Agent execution halted: failure rate exceeded 40% in a rolling 60s window."
+      });
+      for (const ws of sockets) {
+        ws.send(criticalEvt);
+      }
+      void notifier
+        ?.send("Autarch District\nCRITICAL: Circuit breaker tripped. All agents paused.")
+        .catch(() => undefined);
     }
 
     if (config.TELEGRAM_NOTIFY_AGENT_EVENTS) {
@@ -154,6 +196,16 @@ export async function buildServer() {
     notifier
   });
   app.get("/policy-violations", async () => ({ violations: await agentStore.listPolicyViolations(200) }));
+  app.get("/metrics", async (_req, reply) => {
+    reply.header("content-type", metrics.contentType());
+    return metrics.expose();
+  });
+  app.post("/circuit-breaker/resume", async () => {
+    circuitBreaker.reset();
+    runner.start();
+    metrics.setActiveAgents(runner.listAgents().length);
+    return { ok: true };
+  });
   app.get("/health", async () => ({ ok: true }));
 
   await app.ready();
