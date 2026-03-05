@@ -134,6 +134,17 @@ export class FileKeystore {
     this.writeStore(store);
   }
 
+  upsertStoredAgent(agent: StoredAgentSecret): void {
+    const store = this.readStore();
+    const idx = store.agents.findIndex((item) => item.agentId === agent.agentId);
+    if (idx >= 0) {
+      store.agents[idx] = agent;
+    } else {
+      store.agents.push(agent);
+    }
+    this.writeStore(store);
+  }
+
   async listSigners(): Promise<Array<{ agentId: string; publicKey: string; createdAt: string }>> {
     const store = this.readStore();
     const out: Array<{ agentId: string; publicKey: string; createdAt: string }> = [];

@@ -55,7 +55,7 @@ describe("keystore envelope encryption", () => {
     };
 
     expect(after.agents[0].encryptedDataKey).not.toBe(before.agents[0].encryptedDataKey);
-    expect(after.agents[0].keyId).not.toBe(before.agents[0].keyId);
+    expect(after.agents[0].keyId).toBe("dev-master");
 
     const signer = await keystore.getSigner(created.agentId);
     expect(signer.publicKey.toBase58()).toBe(created.publicKey);

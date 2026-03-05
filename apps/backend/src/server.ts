@@ -107,7 +107,8 @@ export async function buildServer() {
         const secret = keystore.getStoredAgent(state.agentId);
         await agentStore.upsertAgent(state, {
           encryptedSecret: secret.encryptedSecret,
-          encryptedDataKey: secret.encryptedDataKey
+          encryptedDataKey: secret.encryptedDataKey,
+          keyId: secret.keyId
         });
       },
       onAgentStatusChanged: async (agentId, isActive) => {
@@ -150,6 +151,15 @@ export async function buildServer() {
 
   const persistedAgents = await agentStore.listAgents();
   if (persistedAgents.length > 0) {
+    for (const persisted of persistedAgents) {
+      keystore.upsertStoredAgent({
+        agentId: persisted.agentId,
+        encryptedSecret: persisted.encryptedSecret,
+        encryptedDataKey: persisted.encryptedDataKey,
+        keyId: persisted.keyId,
+        createdAt: new Date().toISOString()
+      });
+    }
     const restoredAgents = runner.restoreAgents(
       persistedAgents.map((agent) => ({
         agentId: agent.agentId,
@@ -170,7 +180,8 @@ export async function buildServer() {
         const secret = keystore.getStoredAgent(state.agentId);
         await agentStore.upsertAgent(state, {
           encryptedSecret: secret.encryptedSecret,
-          encryptedDataKey: secret.encryptedDataKey
+          encryptedDataKey: secret.encryptedDataKey,
+          keyId: secret.keyId
         });
       }
       app.log.info({ count: restoredAgents.length }, "Restored agents from keystore.");

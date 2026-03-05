@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import type { KMSProvider } from "./kms.js";
 
 const AES_GCM_ALGO = "aes-256-gcm";
@@ -28,42 +28,27 @@ function decryptAesGcm(payload: Buffer, key: Buffer): Buffer {
 }
 
 export class DevKmsProvider implements KMSProvider {
-  private readonly keyRegistry = new Map<string, Buffer>();
-  private activeKeyId: string;
+  private readonly masterKey: Buffer;
+  private readonly stableKeyId = "dev-master";
 
   constructor(masterKeyBase64: string) {
     const masterKey = Buffer.from(masterKeyBase64, "base64");
     if (masterKey.length !== 32) {
       throw new Error("KMS_MASTER_KEY_BASE64 must decode to exactly 32 bytes.");
     }
-    this.activeKeyId = `dev-${randomUUID()}`;
-    this.keyRegistry.set(this.activeKeyId, masterKey);
+    this.masterKey = masterKey;
   }
 
   async encrypt(data: Buffer): Promise<{ ciphertext: Buffer; keyId: string }> {
-    const key = this.requireKey(this.activeKeyId);
-    const ciphertext = encryptAesGcm(data, key);
-    return { ciphertext, keyId: this.activeKeyId };
+    const ciphertext = encryptAesGcm(data, this.masterKey);
+    return { ciphertext, keyId: this.stableKeyId };
   }
 
-  async decrypt(ciphertext: Buffer, keyId: string): Promise<Buffer> {
-    const key = this.requireKey(keyId);
-    return decryptAesGcm(ciphertext, key);
+  async decrypt(ciphertext: Buffer, _keyId: string): Promise<Buffer> {
+    return decryptAesGcm(ciphertext, this.masterKey);
   }
 
   async rotateKey(): Promise<string> {
-    const current = this.requireKey(this.activeKeyId);
-    const nextKeyId = `dev-${randomUUID()}`;
-    this.keyRegistry.set(nextKeyId, current);
-    this.activeKeyId = nextKeyId;
-    return nextKeyId;
-  }
-
-  private requireKey(keyId: string): Buffer {
-    const key = this.keyRegistry.get(keyId);
-    if (!key) {
-      throw new Error(`Unknown KMS key id: ${keyId}`);
-    }
-    return key;
+    return this.stableKeyId;
   }
 }

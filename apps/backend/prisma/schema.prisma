@@ -12,6 +12,7 @@ model Agent {
   publicKey        String
   encryptedSecret  String
   encryptedDataKey String
+  keyId            String   @default("dev-master") @map("key_id")
   policyProfile    Json
   strategyName     String   @default("randomSwap") @map("strategy_name")
   isActive         Boolean  @default(false)

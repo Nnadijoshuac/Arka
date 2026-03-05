@@ -6,6 +6,7 @@ import { prisma } from "./db.js";
 type StoredSecretRecord = {
   encryptedSecret: string;
   encryptedDataKey: string;
+  keyId: string;
 };
 
 export class AgentStore {
@@ -16,6 +17,7 @@ export class AgentStore {
         publicKey: state.publicKey,
         encryptedSecret: secretRecord.encryptedSecret,
         encryptedDataKey: secretRecord.encryptedDataKey,
+        keyId: secretRecord.keyId,
         policyProfile: state.policyProfile as unknown as Prisma.InputJsonValue,
         strategyName: state.strategy
       },
@@ -24,6 +26,7 @@ export class AgentStore {
         publicKey: state.publicKey,
         encryptedSecret: secretRecord.encryptedSecret,
         encryptedDataKey: secretRecord.encryptedDataKey,
+        keyId: secretRecord.keyId,
         policyProfile: state.policyProfile as unknown as Prisma.InputJsonValue,
         strategyName: state.strategy,
         isActive: false
@@ -52,6 +55,9 @@ export class AgentStore {
       publicKey: string;
       isActive: boolean;
       strategyName: string;
+      encryptedSecret: string;
+      encryptedDataKey: string;
+      keyId: string;
       policyProfile: Prisma.JsonValue;
     }>
   > {
@@ -61,6 +67,9 @@ export class AgentStore {
       publicKey: row.publicKey,
       isActive: row.isActive,
       strategyName: row.strategyName,
+      encryptedSecret: row.encryptedSecret,
+      encryptedDataKey: row.encryptedDataKey,
+      keyId: row.keyId,
       policyProfile: row.policyProfile
     }));
   }

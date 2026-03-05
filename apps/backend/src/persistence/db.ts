@@ -25,11 +25,17 @@ export async function ensureDatabaseReady(log?: LoggerLike): Promise<void> {
         "publicKey" TEXT NOT NULL,
         "encryptedSecret" TEXT NOT NULL,
         "encryptedDataKey" TEXT NOT NULL,
+        "key_id" TEXT NOT NULL DEFAULT 'dev-master',
         "policyProfile" JSONB NOT NULL,
         "strategy_name" TEXT NOT NULL DEFAULT 'randomSwap',
         "isActive" BOOLEAN NOT NULL DEFAULT false,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Agent"
+      ADD COLUMN IF NOT EXISTS "key_id" TEXT NOT NULL DEFAULT 'dev-master'
     `);
 
     await prisma.$executeRawUnsafe(`
