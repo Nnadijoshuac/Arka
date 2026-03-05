@@ -2,6 +2,13 @@ node_modules
 .pnpm-store
 .env
 .env.local
+.env.*
+!.env.example
+!apps/web/.env.example
+*.pem
+*.key
+*.p12
+id.json
 apps/backend/data/keystore.json
 apps/backend/data/spend-db.json
 apps/backend/dist
