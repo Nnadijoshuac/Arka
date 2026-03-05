@@ -10,6 +10,7 @@ datasource db {
 model Agent {
   id               String   @id @default(uuid())
   publicKey        String
+  displayName      String?  @map("display_name")
   encryptedSecret  String
   encryptedDataKey String
   keyId            String   @default("dev-master") @map("key_id")

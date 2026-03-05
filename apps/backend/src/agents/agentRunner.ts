@@ -24,6 +24,7 @@ export type RunnerEvent = {
 type RunnerHooks = {
   onAgentCreated?: (state: AgentState) => Promise<void>;
   onAgentStatusChanged?: (agentId: string, isActive: boolean) => Promise<void>;
+  onAgentDeleted?: (agentId: string) => Promise<void>;
 };
 
 export class AgentRunner extends EventEmitter {
@@ -54,6 +55,7 @@ export class AgentRunner extends EventEmitter {
       const state: AgentState = {
         agentId: signer.agentId,
         publicKey: signer.publicKey,
+        displayName: `Agent ${this.agents.size + 1}`,
         strategy: strategyName,
         policyProfile: this.profileFactory(signer.agentId),
         lastStatus: "idle"
@@ -68,7 +70,13 @@ export class AgentRunner extends EventEmitter {
   }
 
   restoreAgents(
-    signers: Array<{ agentId: string; publicKey: string; strategyName?: string; policyProfile?: PolicyProfile }>
+    signers: Array<{
+      agentId: string;
+      publicKey: string;
+      displayName?: string;
+      strategyName?: string;
+      policyProfile?: PolicyProfile;
+    }>
   ): AgentState[] {
     const restored: AgentState[] = [];
     for (const signer of signers) {
@@ -78,6 +86,7 @@ export class AgentRunner extends EventEmitter {
       const state: AgentState = {
         agentId: signer.agentId,
         publicKey: signer.publicKey,
+        displayName: signer.displayName,
         strategy: signer.strategyName ?? this.defaultStrategyName,
         policyProfile: signer.policyProfile ?? this.profileFactory(signer.agentId),
         lastStatus: "idle"
@@ -121,6 +130,27 @@ export class AgentRunner extends EventEmitter {
     this.strategyLoader.get(strategyName);
     state.strategy = strategyName;
     return state;
+  }
+
+  setAgentDisplayName(agentId: string, displayName: string): AgentState {
+    const state = this.agents.get(agentId);
+    if (!state) {
+      throw new Error(`Unknown agent: ${agentId}`);
+    }
+    state.displayName = displayName;
+    return state;
+  }
+
+  async deleteAgent(agentId: string): Promise<void> {
+    const existing = this.agents.get(agentId);
+    if (!existing) {
+      throw new Error(`Unknown agent: ${agentId}`);
+    }
+    this.stopAgent(agentId);
+    this.agents.delete(agentId);
+    if (this.hooks.onAgentDeleted) {
+      await this.hooks.onAgentDeleted(agentId);
+    }
   }
 
   resumeActiveRunners(activeAgentIds: string[], intervalMs = 3000): void {

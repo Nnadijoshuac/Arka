@@ -23,6 +23,7 @@ export async function ensureDatabaseReady(log?: LoggerLike): Promise<void> {
       CREATE TABLE IF NOT EXISTS "Agent" (
         "id" TEXT NOT NULL PRIMARY KEY,
         "publicKey" TEXT NOT NULL,
+        "display_name" TEXT,
         "encryptedSecret" TEXT NOT NULL,
         "encryptedDataKey" TEXT NOT NULL,
         "key_id" TEXT NOT NULL DEFAULT 'dev-master',
@@ -36,6 +37,10 @@ export async function ensureDatabaseReady(log?: LoggerLike): Promise<void> {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "Agent"
       ADD COLUMN IF NOT EXISTS "key_id" TEXT NOT NULL DEFAULT 'dev-master'
+    `);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Agent"
+      ADD COLUMN IF NOT EXISTS "display_name" TEXT
     `);
 
     await prisma.$executeRawUnsafe(`
