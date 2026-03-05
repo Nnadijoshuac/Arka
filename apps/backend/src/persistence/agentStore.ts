@@ -15,6 +15,7 @@ export class AgentStore {
       where: { id: state.agentId },
       update: {
         publicKey: state.publicKey,
+        displayName: state.displayName,
         encryptedSecret: secretRecord.encryptedSecret,
         encryptedDataKey: secretRecord.encryptedDataKey,
         keyId: secretRecord.keyId,
@@ -24,6 +25,7 @@ export class AgentStore {
       create: {
         id: state.agentId,
         publicKey: state.publicKey,
+        displayName: state.displayName,
         encryptedSecret: secretRecord.encryptedSecret,
         encryptedDataKey: secretRecord.encryptedDataKey,
         keyId: secretRecord.keyId,
@@ -49,10 +51,19 @@ export class AgentStore {
     await prisma.agent.updateMany({ where: { id: agentId }, data: { strategyName } });
   }
 
+  async updateAgentDisplayName(agentId: string, displayName: string): Promise<void> {
+    await prisma.agent.updateMany({ where: { id: agentId }, data: { displayName } });
+  }
+
+  async deleteAgent(agentId: string): Promise<void> {
+    await prisma.agent.deleteMany({ where: { id: agentId } });
+  }
+
   async listAgents(): Promise<
     Array<{
       agentId: string;
       publicKey: string;
+      displayName: string | null;
       isActive: boolean;
       strategyName: string;
       encryptedSecret: string;
@@ -65,6 +76,7 @@ export class AgentStore {
     return rows.map((row) => ({
       agentId: row.id,
       publicKey: row.publicKey,
+      displayName: row.displayName,
       isActive: row.isActive,
       strategyName: row.strategyName,
       encryptedSecret: row.encryptedSecret,

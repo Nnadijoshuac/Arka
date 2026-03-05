@@ -23,6 +23,10 @@ const updateStrategySchema = z.object({
   strategyName: z.string().min(1)
 });
 
+const updateNameSchema = z.object({
+  displayName: z.string().min(1).max(64)
+});
+
 export async function registerAgentRoutes(
   app: FastifyInstance,
   runner: AgentRunner,
@@ -59,6 +63,30 @@ export async function registerAgentRoutes(
       const updated = runner.setAgentStrategy(agentId, strategyName);
       await agentStore.updateAgentStrategy(agentId, strategyName);
       return { agent: updated };
+    } catch (error) {
+      reply.code(404);
+      return { message: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  app.patch("/agents/:agentId/name", async (req, reply) => {
+    const { agentId } = req.params as { agentId: string };
+    const { displayName } = updateNameSchema.parse(req.body ?? {});
+    try {
+      const updated = runner.setAgentDisplayName(agentId, displayName.trim());
+      await agentStore.updateAgentDisplayName(agentId, displayName.trim());
+      return { agent: updated };
+    } catch (error) {
+      reply.code(404);
+      return { message: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  app.delete("/agents/:agentId", async (req, reply) => {
+    const { agentId } = req.params as { agentId: string };
+    try {
+      await runner.deleteAgent(agentId);
+      return { ok: true };
     } catch (error) {
       reply.code(404);
       return { message: error instanceof Error ? error.message : String(error) };

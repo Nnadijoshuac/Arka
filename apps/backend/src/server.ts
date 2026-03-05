@@ -113,6 +113,10 @@ export async function buildServer() {
       },
       onAgentStatusChanged: async (agentId, isActive) => {
         await agentStore.setAgentActive(agentId, isActive);
+      },
+      onAgentDeleted: async (agentId) => {
+        keystore.deleteStoredAgent(agentId);
+        await agentStore.deleteAgent(agentId);
       }
     }
   );
@@ -164,6 +168,7 @@ export async function buildServer() {
       persistedAgents.map((agent) => ({
         agentId: agent.agentId,
         publicKey: agent.publicKey,
+        displayName: agent.displayName ?? undefined,
         strategyName: agent.strategyName,
         policyProfile: agent.policyProfile as unknown as PolicyProfile
       }))

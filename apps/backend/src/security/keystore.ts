@@ -145,6 +145,16 @@ export class FileKeystore {
     this.writeStore(store);
   }
 
+  deleteStoredAgent(agentId: string): void {
+    const store = this.readStore();
+    const nextAgents = store.agents.filter((item) => item.agentId !== agentId);
+    if (nextAgents.length === store.agents.length) {
+      return;
+    }
+    store.agents = nextAgents;
+    this.writeStore(store);
+  }
+
   async listSigners(): Promise<Array<{ agentId: string; publicKey: string; createdAt: string }>> {
     const store = this.readStore();
     const out: Array<{ agentId: string; publicKey: string; createdAt: string }> = [];
