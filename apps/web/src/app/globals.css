@@ -2308,6 +2308,10 @@ button:focus-visible {
   width: 100%;
 }
 
+.profile-danger-action .btn-danger {
+  margin-top: 10px;
+}
+
 .rename-row {
   display: flex;
   gap: 8px;
@@ -2371,6 +2375,19 @@ button:focus-visible {
 .dashboard-root.dashboard-dark .chat-meta,
 .dashboard-root.dashboard-dark .mini-fields label {
   color: #c2c2c2;
+}
+
+.dashboard-root.dashboard-dark .social-profile .detail-item {
+  background: #1b1b1b;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.dashboard-root.dashboard-dark .social-profile .detail-item p {
+  color: #e8e8e8;
+}
+
+.dashboard-root.dashboard-dark .social-profile .mono {
+  color: #f1f1f1;
 }
 
 @media (max-width: 1200px) {

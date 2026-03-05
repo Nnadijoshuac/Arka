@@ -611,25 +611,6 @@ export default function DashboardPage() {
                       Save Name
                     </button>
                   </div>
-                  <button
-                    className="btn btn-danger"
-                    disabled={!selected || busyAction !== null}
-                    onClick={async () => {
-                      if (!selected) return;
-                      const proceed = window.confirm(`Delete ${selected.displayName ?? selected.agentId}?`);
-                      if (!proceed) return;
-                      try {
-                        await deleteAgent(selected.agentId);
-                        await refreshAgents();
-                        setSelectedAgentId(undefined);
-                        setStatus("Agent deleted.", "ok");
-                      } catch (err) {
-                        setStatus(err instanceof Error ? err.message : String(err), "error");
-                      }
-                    }}
-                  >
-                    Delete Agent
-                  </button>
                 </div>
                 <div className="detail-item">
                   <small>Agent ID</small>
@@ -742,6 +723,28 @@ export default function DashboardPage() {
                     }}
                   >
                     Save Limits
+                  </button>
+                </div>
+                <div className="detail-item profile-danger-action">
+                  <small>Danger Zone</small>
+                  <button
+                    className="btn btn-danger"
+                    disabled={!selected || busyAction !== null}
+                    onClick={async () => {
+                      if (!selected) return;
+                      const proceed = window.confirm(`Delete ${selected.displayName ?? selected.agentId}?`);
+                      if (!proceed) return;
+                      try {
+                        await deleteAgent(selected.agentId);
+                        await refreshAgents();
+                        setSelectedAgentId(undefined);
+                        setStatus("Agent deleted.", "ok");
+                      } catch (err) {
+                        setStatus(err instanceof Error ? err.message : String(err), "error");
+                      }
+                    }}
+                  >
+                    Delete Agent
                   </button>
                 </div>
               </div>
