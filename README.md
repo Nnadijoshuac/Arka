@@ -84,6 +84,7 @@ flowchart LR
   - `DENY_SLIPPAGE_EXCEEDED`
 - **Simulation before send** to reduce failed transactions.
 - **Circuit breaker** pauses all agents when failure rate breaches threshold.
+- **Repo hygiene checks** documented in `SECURITY.md`.
 
 ## Threat Model
 ### In scope

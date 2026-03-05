@@ -1,15 +1,20 @@
-# Security Notes
+## Security Hygiene
 
-- Devnet-only guard is enforced in backend config.
-- Agent secret keys are encrypted at rest with AES-256-GCM.
-- Master key must be provided via `KEYSTORE_MASTER_KEY`.
-- Signing path includes program allowlist and spend caps.
-- Simulation runs before broadcast when building wallet transactions.
-- Confirmation checks signature status and blockhash expiration.
+This repository is configured to avoid committing operational secrets.
 
-## TODO (Production Hardening)
+### Never Commit
+- `.env`, `.env.local`, or any `.env.*` file (except `.env.example`)
+- Solana keypair files such as `id.json`
+- Private key exports (`*.pem`, `*.key`, `*.p12`)
 
-- Replace local keystore with cloud KMS/HSM.
-- Persist policy counters in a durable store.
-- Add nonce/replay protections and richer tx inspection.
-- Add key rotation and emergency revoke workflows.
+### Safe Configuration Pattern
+- Keep only placeholders in tracked example files:
+  - `.env.example`
+  - `apps/web/.env.example`
+- Store runtime secrets in your hosting provider environment settings.
+
+### Quick Manual Checks Before Push
+- `git status --short` to confirm no secret files are staged.
+- `rg -n "(PRIVATE KEY|SIGNER_PRIVATE_KEY=\\[|TELEGRAM_BOT_TOKEN=\\d)" -S .`
+
+If a secret was ever exposed, rotate it immediately.
