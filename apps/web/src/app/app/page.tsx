@@ -35,35 +35,38 @@ export default function DashboardPage() {
   const [walletSol, setWalletSol] = useState<number | null>(null);
   const [walletBusy, setWalletBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
+  const [txWarning, setTxWarning] = useState<string>("");
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const EVENT_CACHE_KEY = "autarch-events-cache-v2";
   const VIOLATION_CACHE_KEY = "autarch-violations-cache-v2";
 
   async function refreshDashboardData(): Promise<void> {
-    const [freshAgents, policyRows, txRows] = await Promise.all([
-      listAgents(),
-      listPolicyViolations(),
-      listTransactions()
-    ]);
+    const [freshAgents, policyRows] = await Promise.all([listAgents(), listPolicyViolations()]);
     setAgents(freshAgents);
     setViolations(policyRows);
-    setEvents((prev) => {
-      if (txRows.length === 0 && prev.length > 0) {
-        return prev;
-      }
-      return txRows
-        .slice()
-        .reverse()
-        .map((tx) => ({
-          timestamp: tx.createdAt,
-          agentId: tx.agentId,
-          action: tx.action ?? "unknown",
-          status: tx.status,
-          signature: tx.signature ?? undefined,
-          err: tx.reason ?? undefined
-        }));
-    });
+    try {
+      const txRows = await listTransactions();
+      setTxWarning("");
+      setEvents((prev) => {
+        if (txRows.length === 0 && prev.length > 0) {
+          return prev;
+        }
+        return txRows
+          .slice()
+          .reverse()
+          .map((tx) => ({
+            timestamp: tx.createdAt,
+            agentId: tx.agentId,
+            action: tx.action ?? "unknown",
+            status: tx.status,
+            signature: tx.signature ?? undefined,
+            err: tx.reason ?? undefined
+          }));
+      });
+    } catch (err) {
+      setTxWarning(err instanceof Error ? err.message : String(err));
+    }
   }
 
   function getWalletProvider(): PhantomProvider | null {
@@ -142,7 +145,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      void refreshDashboardData();
+      void refreshDashboardData().catch(() => undefined);
     }, 10000);
     return () => clearInterval(timer);
   }, []);
@@ -287,6 +290,11 @@ export default function DashboardPage() {
               {statusMessage ? (
                 <div className="status-banner status-error status-show" style={{ margin: "16px 24px 0" }}>
                   {statusMessage}
+                </div>
+              ) : null}
+              {txWarning ? (
+                <div className="status-banner status-error status-show" style={{ margin: "12px 24px 0" }}>
+                  {txWarning}
                 </div>
               ) : null}
 

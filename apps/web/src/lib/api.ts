@@ -200,8 +200,9 @@ export async function listPolicyViolations(): Promise<PolicyViolation[]> {
 export async function listTransactions(): Promise<TransactionRow[]> {
   const res = await apiFetch(`${API_BASE}/transactions`, { cache: "no-store" });
   if (res.status === 404) {
-    // Backward compatibility for older backend deployments without /transactions.
-    return [];
+    throw new Error(
+      "Transactions endpoint is unavailable on this backend deployment (/transactions returned 404)."
+    );
   }
   if (!res.ok) {
     throw await parseApiError(res);

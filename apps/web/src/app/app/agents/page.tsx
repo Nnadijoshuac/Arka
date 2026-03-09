@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   createAgents,
@@ -60,7 +60,7 @@ function CopyIcon() {
   );
 }
 
-export default function AgentsPage() {
+function AgentsPageInner() {
   const searchParams = useSearchParams();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [events, setEvents] = useState<TxEvent[]>([]);
@@ -74,6 +74,7 @@ export default function AgentsPage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"ok" | "error">("ok");
   const [statusVisible, setStatusVisible] = useState(false);
+  const [txWarning, setTxWarning] = useState("");
   const [strategies, setStrategies] = useState<string[]>([]);
   const [violations, setViolations] = useState<PolicyViolation[]>([]);
   const [policyForm, setPolicyForm] = useState<PolicyProfile>({
@@ -149,31 +150,36 @@ export default function AgentsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const [agentRows, strategyRows, policyRows, txRows] = await Promise.all([
+        const [agentRows, strategyRows, policyRows] = await Promise.all([
           listAgents(),
           listStrategies(),
-          listPolicyViolations(),
-          listTransactions()
+          listPolicyViolations()
         ]);
         setAgents(agentRows);
         setStrategies(strategyRows);
         setViolations(policyRows);
-        setEvents((prev) => {
-          if (txRows.length === 0 && prev.length > 0) {
-            return prev;
-          }
-          return txRows
-            .slice()
-            .reverse()
-            .map((tx) => ({
-              timestamp: tx.createdAt,
-              agentId: tx.agentId,
-              action: tx.action ?? "unknown",
-              status: tx.status,
-              signature: tx.signature ?? undefined,
-              err: tx.reason ?? undefined
-            }));
-        });
+        try {
+          const txRows = await listTransactions();
+          setTxWarning("");
+          setEvents((prev) => {
+            if (txRows.length === 0 && prev.length > 0) {
+              return prev;
+            }
+            return txRows
+              .slice()
+              .reverse()
+              .map((tx) => ({
+                timestamp: tx.createdAt,
+                agentId: tx.agentId,
+                action: tx.action ?? "unknown",
+                status: tx.status,
+                signature: tx.signature ?? undefined,
+                err: tx.reason ?? undefined
+              }));
+          });
+        } catch (err) {
+          setTxWarning(err instanceof Error ? err.message : String(err));
+        }
         if (strategyRows.length > 0) setSelectedStrategy(strategyRows[0]);
       } catch (err) {
         setStatus(err instanceof Error ? err.message : String(err), "error");
@@ -182,7 +188,7 @@ export default function AgentsPage() {
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => void refreshTransactions(), 12000);
+    const timer = setInterval(() => void refreshTransactions().catch(() => undefined), 12000);
     return () => clearInterval(timer);
   }, []);
 
@@ -243,23 +249,28 @@ export default function AgentsPage() {
   }
 
   async function refreshTransactions() {
-    const txRows = await listTransactions();
-    setEvents((prev) => {
-      if (txRows.length === 0 && prev.length > 0) {
-        return prev;
-      }
-      return txRows
-        .slice()
-        .reverse()
-        .map((tx) => ({
-          timestamp: tx.createdAt,
-          agentId: tx.agentId,
-          action: tx.action ?? "unknown",
-          status: tx.status,
-          signature: tx.signature ?? undefined,
-          err: tx.reason ?? undefined
-        }));
-    });
+    try {
+      const txRows = await listTransactions();
+      setTxWarning("");
+      setEvents((prev) => {
+        if (txRows.length === 0 && prev.length > 0) {
+          return prev;
+        }
+        return txRows
+          .slice()
+          .reverse()
+          .map((tx) => ({
+            timestamp: tx.createdAt,
+            agentId: tx.agentId,
+            action: tx.action ?? "unknown",
+            status: tx.status,
+            signature: tx.signature ?? undefined,
+            err: tx.reason ?? undefined
+          }));
+      });
+    } catch (err) {
+      setTxWarning(err instanceof Error ? err.message : String(err));
+    }
   }
 
   async function refreshViolations() {
@@ -478,6 +489,11 @@ export default function AgentsPage() {
                     {statusMessage}
                   </div>
                 ) : null}
+                {txWarning ? (
+                  <div className="status-banner status-error status-show">
+                    {txWarning}
+                  </div>
+                ) : null}
               </section>
 
               <section className="social-layout agents-social">
@@ -631,5 +647,13 @@ export default function AgentsPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AgentsPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#0f0f11]" />}>
+      <AgentsPageInner />
+    </Suspense>
   );
 }
